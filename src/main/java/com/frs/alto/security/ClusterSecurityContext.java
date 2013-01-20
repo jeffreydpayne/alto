@@ -26,6 +26,7 @@ public class ClusterSecurityContext extends SecurityContextImpl {
 	private String clusterSessionId = null;
 	private long authTimestamp = 0l;
 	private long lastUpdateTimestamp = 0;
+	private boolean persistent = false;
 	
 	public Locale getLocale() {
 		return locale;
@@ -60,6 +61,14 @@ public class ClusterSecurityContext extends SecurityContextImpl {
 
 	public void setLastUpdateTimestamp(long lastUpdateTimestamp) {
 		this.lastUpdateTimestamp = lastUpdateTimestamp;
+	}
+
+	public boolean isPersistent() {
+		return persistent;
+	}
+
+	public void setPersistent(boolean persistent) {
+		this.persistent = persistent;
 	}
 	
 

@@ -47,7 +47,7 @@ public class ClusterSessionAuthenticationStrategy implements SessionAuthenticati
 			postAuthSessionCount += sessionIds.size();
 			
 			if (postAuthSessionCount > maxSessions) {
-				purgeSessions(sessionIds, postAuthSessionCount - maxSessions);
+				purgeSessions(request, sessionIds, postAuthSessionCount - maxSessions);
 			}
 		}
 			
@@ -66,7 +66,7 @@ public class ClusterSessionAuthenticationStrategy implements SessionAuthenticati
 						postAuthSessionCount += sessionIds.size();
 						
 						if (postAuthSessionCount > maxClientTypeSessions) {
-							purgeSessions(sessionIds, postAuthSessionCount - maxClientTypeSessions);
+							purgeSessions(request, sessionIds, postAuthSessionCount - maxClientTypeSessions);
 						}
 					}
 				}
@@ -80,7 +80,7 @@ public class ClusterSessionAuthenticationStrategy implements SessionAuthenticati
 		//session fixation
 		if ( (context.getClusterSessionId() == null) || sessionFixation) {
 			if (context.getClusterSessionId() != null) {
-				securityContextRepository.expire(context.getClusterSessionId());
+				securityContextRepository.expire(request, context.getClusterSessionId());
 			}
 			context.setClusterSessionId(clusterSessionIdGenerator.generate(request));
 			clusterSessionIdResolver.sendClusterSessionId(request, response, context.getClusterSessionId());
@@ -92,7 +92,7 @@ public class ClusterSessionAuthenticationStrategy implements SessionAuthenticati
 		
 	}
 	
-	private void purgeSessions(Collection<String> sessionIds, int sessionCount) {
+	private void purgeSessions(HttpServletRequest request, Collection<String> sessionIds, int sessionCount) {
 		
 		Collection<ClusterSecurityContext> contexts = new ArrayList<ClusterSecurityContext>();
 		boolean lastUpdatesComplete = true;
@@ -122,10 +122,10 @@ public class ClusterSessionAuthenticationStrategy implements SessionAuthenticati
 		int purgedCount = 0;
 		while (itr.hasNext() && (purgedCount < sessionCount) ) {
 			if (maxSessionsByClientType != null) {
-				securityContextRepository.expire(itr.next(), maxSessionsByClientType.keySet());
+				securityContextRepository.expire(request, itr.next(), maxSessionsByClientType.keySet());
 			}
 			else {
-				securityContextRepository.expire(itr.next());
+				securityContextRepository.expire(request, itr.next());
 			}
 			purgedCount++;
 		}
