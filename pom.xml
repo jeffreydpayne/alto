@@ -3,18 +3,18 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.flex</groupId>
-  <artifactId>flex-alto</artifactId>
+  <artifactId>alto</artifactId>
   <version>0.2-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>Flex Alto</name>
+  <name>Alto J2EE Cloud Utilities</name>
   <properties>
     <spring.version>3.1.3.RELEASE</spring.version>
     <hibernate.version>4.1.7.Final</hibernate.version>
   </properties>
   <scm>
-    <connection>scm:svn:https://code.google.com/p/flex-alto/</connection>
-    <developerConnection>scm:svn:https://code.google.com/p/flex-alto/</developerConnection>
-    <url>https://code.google.com/p/flex-alto/</url>
+    <connection>https://github.com/alto-project/alto.git</connection>
+    <developerConnection>https://github.com/alto-project/alto.git</developerConnection>
+    <url>http://github.com/alto-project/alto</url>
   </scm>
   <distributionManagement>
     <repository>
