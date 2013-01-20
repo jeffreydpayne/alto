@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:amq="http://activemq.apache.org/schema/core"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+       http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+ 
+
+  	
+  <bean id="defaultDatasource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+  	  <property name="driverClass" value="com.mysql.jdbc.Driver"/>
+      <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/alto_test"/>
+      <property name="user" value="alto_test"/>
+      <property name="password" value="alto_test"/>
+  </bean>
+
+  <bean id="defaultSessionFactory" class="com.frs.alto.hibernate4.Hibernate4SessionFactoryBean">
+    <property name="dataSource" ref="defaultDatasource"/>
+    <property name="cacheRegionFactory" ref="region-factory-alto-cache"/>
+    <property name="mappingResources">
+      <list>
+        <value>alto-test.hbm.xml</value>
+      </list>
+    </property>
+    <property name="hibernateProperties">
+      <props>
+      	<prop key="hibernate.connection.release_mode">after_transaction</prop>
+        <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+        <prop key="hibernate.c3p0.acquire_increment">1</prop>
+        <prop key="hibernate.c3p0.idle_test_period">100</prop>
+        <prop key="hibernate.c3p0.max_size">100</prop>
+        <prop key="hibernate.c3p0.max_statements">0</prop>
+        <prop key="hibernate.c3p0.min_size">5</prop>
+        <prop key="hibernate.c3p0.timeout">100</prop>
+        <prop key="hibernate.c3p0.unreturnedConnectionTimeout">120</prop>
+        <prop key="debugUnreturnedConnectionStackTraces">true</prop>
+        <prop key="hibernate.hbm2ddl.auto">create-drop</prop>
+        <prop key="hibernate.cache.use_second_level_cache">true</prop>
+		<prop key="hibernate.cache.use_query_cache">true</prop>
+       </props>
+    </property>
+  </bean>
+  
+  <bean id="defaultTransactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+  	<property name="sessionFactory" ref="defaultSessionFactory"/>
+  	<property name="transactionSynchronizationName" value="SYNCHRONIZATION_ON_ACTUAL_TRANSACTION"/>
+  </bean>
+  
+  <bean id="region-factory-alto-cache" class="com.frs.alto.cache.hibernate4.AltoCacheRegionFactory">
+  		<property name="altoCache" ref="alto-cache-memcached"/>
+  		<property name="timestampGenerator" ref="timestamp-generator"/>
+  </bean>
+  
+  <bean id="alto-cache-memcached" class="com.frs.alto.cache.memcached.MemcachedAltoCache">
+  		<property name="keyGenerator" ref="key-generator-hashing"/>
+  		<property name="maintainRegions" value="true"/>
+  </bean>
+  
+  <bean id="timestamp-generator" class="com.frs.alto.cache.hibernate4.AltoCacheTimestampGenerator">
+  		<property name="altoCache" ref="alto-cache-memcached"/>
+  </bean>
+  
+  <bean id="key-generator-hashing" class="com.frs.alto.cache.HashingKeyGenerator">
+  		<property name="keyGenerator" ref="key-generator-tenant"/>
+  </bean>
+  
+  <bean id="key-generator-tenant" class="com.frs.alto.cache.TenantCacheKeyGenerator">
+  
+  </bean>
+  
+ 
+   
+</beans>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.frs.alto.test.fixture">
+
+    <identifier-generator name="alto-uuid" class="com.frs.alto.hibernate4.LocalUUIDGenerator"/>
+
+	<class name="TestDomain" table="alto_test_domain">
+		<cache usage="read-write" />
+		<id column="id" length="36" name="objectIdentifier" type="string">
+			<generator class="alto-uuid"/>
+		</id>
+		<natural-id mutable="true">
+			<property name="naturalId" column="natural_id" not-null="false"/>
+		</natural-id>
+		<property column="name" length="128" name="name"/>
+	    <set cascade="all-delete-orphan" inverse="true" name="children">
+	    	<cache usage="read-write"/>
+        	<key column="parent_id"/>
+	        <one-to-many class="TestChild"/>
+    	</set>
+				
+	</class>
+	
+	<class name="TestChild" table="alto_test_child">
+		<cache usage="read-write" />
+		<id column="id" length="36" name="objectIdentifier" type="string">
+			<generator class="alto-uuid"/>
+		</id>
+		<property column="name" length="128" name="name"/>
+	    <many-to-one column="parent_id" name="parent" not-null="true"/>
+				
+	</class>
+	
+</hibernate-mapping>
