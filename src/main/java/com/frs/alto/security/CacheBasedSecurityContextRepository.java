@@ -6,11 +6,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -55,8 +55,9 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	 * 
 	 */
 	
-	private Map<String, ScheduledFuture<Long>> timestampUpdaters = null;
+	private Map<String, ScheduledFuture> timestampUpdaters = null;
 	private Executor updateQueuer = null;
+	private ScheduledExecutorService timestampUpdater = null;
 	
 	
 	public CacheBasedSecurityContextRepository() {
@@ -69,8 +70,9 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	public void afterPropertiesSet() throws Exception {
 		
 		if (!fuzzyTimeouts) {
-			timestampUpdaters = new HashMap<String, ScheduledFuture<Long>>();
+			timestampUpdaters = new HashMap<String, ScheduledFuture>();
 			updateQueuer = Executors.newSingleThreadExecutor();
+			timestampUpdater = Executors.newScheduledThreadPool(1);
 			
 		}
 		
@@ -92,7 +94,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 		}
 				
 		if (clusterSessionId != null) {
-			context = loadById(clusterSessionId, !touchless);			
+			context = loadById(clusterSessionId);			
 		}
 		
 		if (isTimedOut(context)) {
@@ -140,7 +142,6 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	
 	protected long doCachePersist(final Collection<ClientType> clientTypes, final ClusterSecurityContext context) {
 		
-		context.setLastUpdateTimestamp(System.currentTimeMillis());
 		context.setPersistent(true);
 		altoCache.put(region, context.getClusterSessionId(), context);
 
@@ -168,7 +169,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 				
 				@Override
 				public void run() {
-					ScheduledFuture<Long> future = timestampUpdaters.get(context.getClusterSessionId());
+					ScheduledFuture future = timestampUpdaters.get(context.getClusterSessionId());
 					if (future != null) {
 						future.cancel(false);
 						timestampUpdaters.remove(context.getClusterSessionId());		
@@ -184,7 +185,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	}
 	
 	@Override
-	public void saveContext(SecurityContext context, HttpServletRequest request, HttpServletResponse response) {
+	public void saveContext( SecurityContext context, HttpServletRequest request, HttpServletResponse response) {
 				
 		
 		if (!(context instanceof ClusterSecurityContext)) {
@@ -202,11 +203,34 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 			doCachePersist(clientTypeResolver.resolveClientType(request), ctx);
 		}
 		else if (!fuzzyTimeouts){
+			
+			final Collection<ClientType> types = clientTypeResolver.resolveClientType(request);
+			
+			final String clusterSessionId = ctx.getClusterSessionId(); 
+			
+			final long timestamp = System.currentTimeMillis();
+			
 			updateQueuer.execute(new Runnable() {
 				
 				@Override
 				public void run() {
 					
+					ScheduledFuture future = timestampUpdater.schedule(new Runnable() {
+						
+						@Override
+						public void run() {
+							//refetching the context ensures we pickup logouts and don't accidentally set the time back if another node updated it recently
+							ClusterSecurityContext threadContext = loadById(clusterSessionId);
+							if ( (threadContext != null) && (timestamp > threadContext.getLastUpdateTimestamp()) ) {
+								threadContext.setLastUpdateTimestamp(timestamp);
+								logger.info("Scheduled session refresh fired for session id: " + clusterSessionId);
+								doCachePersist(types, threadContext);
+							}
+							
+						}
+					}, sessionCacheRefreshInterval, TimeUnit.MINUTES);
+					
+					timestampUpdaters.put(clusterSessionId, future);
 					
 					
 				}
@@ -244,12 +268,8 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	
 
 	@Override
-	public ClusterSecurityContext loadById(String clusterSessionId,	boolean touch) {
+	public ClusterSecurityContext loadById(String clusterSessionId) {
 		ClusterSecurityContext context = (ClusterSecurityContext)altoCache.get(region, clusterSessionId);
-		if ( (context != null) && touch && isRefreshEligible(context)) {
-			context.setLastUpdateTimestamp(System.currentTimeMillis());
-			altoCache.put(region, clusterSessionId, context);
-		}
 		
 		return context;
 	}
@@ -259,7 +279,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 		//clear session cache
 		request.getSession().removeAttribute(httpSessionCacheKey);
 		
-		ClusterSecurityContext context = loadById(clusterSessionId, false);
+		ClusterSecurityContext context = loadById(clusterSessionId);
 		if ( (context != null) && (context.getAuthentication() != null) ) {
 			Collection<String> sessionIds = getClusterSessionIdsForPrinciple(context.getAuthentication());
 			Collection<String> newIds = new ArrayList<String>();
@@ -281,7 +301,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 		
 	@Override
 	public void expire(HttpServletRequest request, String clusterSessionId, Collection<ClientType> clientTypes) {
-		ClusterSecurityContext context = loadById(clusterSessionId, false);
+		ClusterSecurityContext context = loadById(clusterSessionId);
 		if ( (context != null) && (context.getAuthentication() != null) ) {
 			for (ClientType clientType : clientTypes) {
 				Collection<String> sessionIds = getClusterSessionIdsForPrinciple(context.getAuthentication(), clientType);

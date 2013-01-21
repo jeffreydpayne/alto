@@ -13,7 +13,7 @@ public interface ClusterSecurityContextRepository extends SecurityContextReposit
 
 	public void expire(HttpServletRequest request, String clusterSessionId);
 	public void expire(HttpServletRequest request, String clusterSessionId, Collection<ClientType> clientTypes);
-	public ClusterSecurityContext loadById(String clusterSessionId, boolean touch);
+	public ClusterSecurityContext loadById(String clusterSessionId);
 	public Collection<String> getClusterSessionIdsForPrinciple(Principal principal);
 	public Collection<String> getClusterSessionIdsForPrinciple(Principal principal, ClientType clientType);
 	

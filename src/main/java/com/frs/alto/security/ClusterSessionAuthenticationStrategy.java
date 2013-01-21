@@ -99,7 +99,7 @@ public class ClusterSessionAuthenticationStrategy implements SessionAuthenticati
 		
 		ClusterSecurityContext context = null;
 		for (String id : sessionIds) {
-			context = securityContextRepository.loadById(id, false);
+			context = securityContextRepository.loadById(id);
 			if (context.getLastUpdateTimestamp() == 0) {
 				lastUpdatesComplete = false;
 			}
