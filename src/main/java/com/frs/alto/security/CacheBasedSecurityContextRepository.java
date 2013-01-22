@@ -33,7 +33,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	public final static String DEFAULT_USER_SESSION_KEY_PREFIX = "user-sessions";
 	public final static String DEFAULT_HTTP_SESSION_CACHE_KEY = "cluster-session";
 	
-	private static Log logger = LogFactory.getLog(CacheBasedSecurityContextRepository.class); 
+	private static Log log = LogFactory.getLog(CacheBasedSecurityContextRepository.class); 
 	
 	private AltoCache altoCache = null;
 	private String region = CacheBasedSecurityContextRepository.class.getName();
@@ -142,6 +142,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	
 	protected long doCachePersist(final Collection<ClientType> clientTypes, final ClusterSecurityContext context) {
 		
+		log.info("Pushing session to cache: " + context.getClusterSessionId());
 		context.setPersistent(true);
 		altoCache.put(region, context.getClusterSessionId(), context);
 
@@ -215,6 +216,8 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 				@Override
 				public void run() {
 					
+					log.info("Queueing Session Refresh: " + clusterSessionId);
+					
 					ScheduledFuture future = timestampUpdater.schedule(new Runnable() {
 						
 						@Override
@@ -223,7 +226,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 							ClusterSecurityContext threadContext = loadById(clusterSessionId);
 							if ( (threadContext != null) && (timestamp > threadContext.getLastUpdateTimestamp()) ) {
 								threadContext.setLastUpdateTimestamp(timestamp);
-								logger.info("Scheduled session refresh fired for session id: " + clusterSessionId);
+								log.info("Scheduled session refresh fired for session id: " + clusterSessionId);
 								doCachePersist(types, threadContext);
 							}
 							
@@ -275,6 +278,8 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	}
 	@Override
 	public void expire(HttpServletRequest request, String clusterSessionId) {
+		
+		log.info("Expiring Session: " + clusterSessionId);
 		
 		//clear session cache
 		request.getSession().removeAttribute(httpSessionCacheKey);
