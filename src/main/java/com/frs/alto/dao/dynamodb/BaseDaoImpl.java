@@ -17,7 +17,6 @@ import com.amazonaws.services.dynamodb.model.CreateTableRequest;
 import com.amazonaws.services.dynamodb.model.CreateTableResult;
 import com.amazonaws.services.dynamodb.model.DeleteItemRequest;
 import com.amazonaws.services.dynamodb.model.DescribeTableRequest;
-import com.amazonaws.services.dynamodb.model.DescribeTableResult;
 import com.amazonaws.services.dynamodb.model.GetItemRequest;
 import com.amazonaws.services.dynamodb.model.GetItemResult;
 import com.amazonaws.services.dynamodb.model.Key;
@@ -25,6 +24,8 @@ import com.amazonaws.services.dynamodb.model.KeySchema;
 import com.amazonaws.services.dynamodb.model.KeySchemaElement;
 import com.amazonaws.services.dynamodb.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodb.model.PutItemRequest;
+import com.amazonaws.services.dynamodb.model.QueryRequest;
+import com.amazonaws.services.dynamodb.model.QueryResult;
 import com.amazonaws.services.dynamodb.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodb.model.ScanRequest;
 import com.amazonaws.services.dynamodb.model.ScanResult;
@@ -56,7 +57,7 @@ public abstract class BaseDaoImpl<T extends BaseDomainObject> implements BaseDao
 		return getDataSource().getClient();
 	}
 
-	protected String getPrimaryKeyName() {
+	protected String getHashKeyName() {
 		return "id";
 	}
 	protected String getRangeKeyName() {
@@ -64,6 +65,11 @@ public abstract class BaseDaoImpl<T extends BaseDomainObject> implements BaseDao
 	}
 	protected Class getRangeKeyType() {
 		return null;
+	}
+	
+
+	protected String getPrimaryKey(T domain) {
+		return domain.getObjectIdentifier();
 	}
 	
 	protected String fromDate(Date dt) {
@@ -186,14 +192,27 @@ public abstract class BaseDaoImpl<T extends BaseDomainObject> implements BaseDao
 		
 	}
 	
+	protected ScalarAttributeType fromClass(Class clazz) {
+		
+		
+		return ScalarAttributeType.S;
+		
+	}
+	
 	protected void initializeTable() {
 		
 		if (!getDataSource().getTableNames().contains(assembleTableName())) {
 			log.info("Creating table: " + assembleTableName());
 			
-			KeySchemaElement hashKey = new KeySchemaElement().withAttributeName(getPrimaryKeyName()).withAttributeType(ScalarAttributeType.S);
+			
+			KeySchemaElement hashKey = new KeySchemaElement().withAttributeName(getHashKeyName()).withAttributeType(ScalarAttributeType.S);
 			KeySchema ks = new KeySchema().withHashKeyElement(hashKey);
-
+			
+			if (getRangeKeyName() != null) {
+				KeySchemaElement rangeKey = new KeySchemaElement().withAttributeName(getRangeKeyName()).withAttributeType(fromClass(getRangeKeyType()));
+				ks = ks.withRangeKeyElement(rangeKey);
+			}
+			
 			ProvisionedThroughput provisionedThroughput = new ProvisionedThroughput()
 			  .withReadCapacityUnits(getDataSource().getReadThroughput())
 			  .withWriteCapacityUnits(getDataSource().getWriteThroughput());
@@ -217,11 +236,22 @@ public abstract class BaseDaoImpl<T extends BaseDomainObject> implements BaseDao
 			}
 			log.info("Table status: " + desc.getTableStatus());
 			
+			Collection<T> factory = factory();
+			if (factory != null) {
+				for (T domain : factory) {
+					save(domain);
+				}
+			}
+			
 			
 			
 		}
 		
 		
+	}
+	
+	protected Collection<T> factory() {
+		return null;
 	}
 
 
@@ -244,6 +274,8 @@ public abstract class BaseDaoImpl<T extends BaseDomainObject> implements BaseDao
 		if (anObject.getObjectIdentifier() == null) {
 			anObject.setObjectIdentifier(getDataSource().generateIdentifier(anObject));
 		}
+		
+		log.info("Saving " + anObject.getClass().getName() + ":" + anObject.getObjectIdentifier());
 		
 		PutItemRequest request = new PutItemRequest();
 		request.setTableName(assembleTableName());
@@ -305,6 +337,28 @@ public abstract class BaseDaoImpl<T extends BaseDomainObject> implements BaseDao
 			return null;
 		}
 	}
+	
+	public Collection<T> findByHashKey(String hashKey) {
+		
+		QueryRequest request = new QueryRequest(assembleTableName(), new AttributeValue(hashKey));
+		
+		QueryResult result = getClient().query(request);
+		
+		Collection<T> results = new ArrayList<T>();
+		
+		List<Map<String, AttributeValue>> items = result.getItems();
+		
+		
+		if (items != null) {
+			for (Map<String, AttributeValue> map : items) {
+				results.add(instantiateObject(map));
+			}
+		}
+		
+		return results;
+		
+		
+	}
 
 	@Override
 	public Collection<String> findAllIds() {
@@ -315,13 +369,13 @@ public abstract class BaseDaoImpl<T extends BaseDomainObject> implements BaseDao
 		do {
 		    ScanRequest scanRequest = new ScanRequest()
 		        .withTableName(assembleTableName())
-		        .withAttributesToGet(getPrimaryKeyName())
+		        .withAttributesToGet(getHashKeyName())
 		        .withLimit(100)
 		        .withExclusiveStartKey(lastKeyEvaluated);
 
 		    ScanResult result = getClient().scan(scanRequest);
 		    for (Map<String, AttributeValue> item : result.getItems()){
-		        results.add(item.get(getPrimaryKeyName()).getS());
+		        results.add(item.get(getHashKeyName()).getS());
 		    }
 		    lastKeyEvaluated = result.getLastEvaluatedKey();
 		} while (lastKeyEvaluated != null);
