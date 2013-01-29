@@ -167,11 +167,16 @@ public final class StateHelper implements Constants {
     	byte[] mac = null;
     	
     	try {
-	    	InetAddress ip = InetAddress.getLocalHost();	 
-			NetworkInterface network = NetworkInterface.getByInetAddress(ip);
-			if (network != null) {
-				mac = network.getHardwareAddress();
-			}
+	    	InetAddress ip = null;
+	    	NetworkInterface network = null;
+	    	try {
+		    	ip = InetAddress.getLocalHost();	 
+				network = NetworkInterface.getByInetAddress(ip);
+				if (network != null) {
+					mac = network.getHardwareAddress();
+				}
+	    	}
+	    	catch (UnknownHostException ex) {}
 			if (mac == null) {
 				Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
 				while (nics.hasMoreElements()) {
