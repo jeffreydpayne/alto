@@ -97,10 +97,12 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 			String regionKey = generateRegionKey(region);
 			String keyList = (String)client.get(regionKey);
 			
-			String[] tokens = StringUtils.split(keyList, "|");
-			
-			for (String token : tokens) {
-				client.delete(token);
+			if (keyList != null) {
+				String[] tokens = StringUtils.split(keyList, "|");
+				
+				for (String token : tokens) {
+					client.delete(token);
+				}
 			}
 		}
 	}
