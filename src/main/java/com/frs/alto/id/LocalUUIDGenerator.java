@@ -1,6 +1,7 @@
-package com.frs.alto.dao.dynamodb;
+package com.frs.alto.id;
 
 import org.apache.commons.id.uuid.VersionOneGenerator;
+
 
 public class LocalUUIDGenerator implements IdentifierGenerator {
 	

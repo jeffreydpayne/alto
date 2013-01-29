@@ -10,7 +10,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.frs.alto.cache.AltoCache;
-import com.frs.alto.dao.dynamodb.LocalUUIDGenerator;
+import com.frs.alto.id.LocalUUIDGenerator;
 
 @ContextConfiguration(locations={"classpath:spring-env-test-memcached.xml"})
 public class MemcachedRegionTest extends AbstractTestNGSpringContextTests {

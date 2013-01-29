@@ -1,4 +1,4 @@
-package com.frs.alto.dao.dynamodb;
+package com.frs.alto.id;
 
 
 public interface IdentifierGenerator {

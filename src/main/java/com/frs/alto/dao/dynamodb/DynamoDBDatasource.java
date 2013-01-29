@@ -12,6 +12,7 @@ import com.amazonaws.services.dynamodb.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodb.model.ListTablesResult;
 import com.frs.alto.cache.AltoCache;
 import com.frs.alto.domain.BaseDomainObject;
+import com.frs.alto.id.IdentifierGenerator;
 
 public class DynamoDBDatasource {
 	
