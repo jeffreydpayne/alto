@@ -4,9 +4,11 @@ import com.frs.alto.core.TenantMetaData;
 
 public class TenantUtils {
 
-	private static final String DEFAULT_TENANT_ID = "default-tenant";
+	public static final String DEFAULT_TENANT_ID = "default-tenant";
 	
 	private static ThreadLocal<TenantMetaData> threadHost = null;
+	
+	private static String defaultTenantId = DEFAULT_TENANT_ID;
 	
 	public static void releaseThreadTenant() {
 		
@@ -27,7 +29,7 @@ public class TenantUtils {
 			return md.getTenantIdentifier();
 		}
 		else {
-			return DEFAULT_TENANT_ID;
+			return defaultTenantId;
 		}
 		
 	}
@@ -54,5 +56,16 @@ public class TenantUtils {
 		}
 		
 	}
+
+	public static String getDefaultTenantId() {
+		return defaultTenantId;
+	}
+
+	public static void setDefaultTenantId(String defaultTenantId) {
+		TenantUtils.defaultTenantId = defaultTenantId;
+	}
+	
+	
+	
 	
 }
