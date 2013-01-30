@@ -35,13 +35,19 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 	
 	private CacheKeyGenerator keyGenerator = new TenantCacheKeyGenerator();
 	
-	private boolean maintainRegions = false;	  
+	private boolean maintainRegions = false;
+	
+	private boolean flushOnStartup = false;
 		
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		super.afterPropertiesSet();
 		client = new MemcachedClient(new InetSocketAddress(getServerHost(), getPortNumber()));
+		
+		if (flushOnStartup) {
+			client.flush();
+		}
 		
 	}
 
