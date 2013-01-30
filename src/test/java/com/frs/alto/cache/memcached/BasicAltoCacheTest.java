@@ -13,7 +13,9 @@ public class BasicAltoCacheTest extends Assert {
 	public void testAltoCacheLifecycle() throws Exception {
 		
 		MemcachedAltoCache cache = new MemcachedAltoCache();
+		cache.setAutoStartup(true);
 		cache.afterPropertiesSet();
+		
 		
 		
 		String regionId = "test";

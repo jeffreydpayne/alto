@@ -55,6 +55,7 @@
   <bean id="alto-cache-memcached" class="com.frs.alto.cache.memcached.MemcachedAltoCache">
   		<property name="keyGenerator" ref="key-generator-hashing"/>
   		<property name="maintainRegions" value="true"/>
+  		<property name="autoStartup" value="true"/>
   </bean>
   
   <bean id="timestamp-generator" class="com.frs.alto.cache.hibernate4.AltoCacheTimestampGenerator">
