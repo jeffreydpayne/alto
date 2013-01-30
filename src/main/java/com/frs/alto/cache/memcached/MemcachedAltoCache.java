@@ -195,6 +195,15 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 			}
 		}
 	}
+	
+	
+
+	@Override
+	public void clearAll() {
+		
+		client.flush();
+		
+	}
 
 	public String getServerHost() {
 		return serverHost;

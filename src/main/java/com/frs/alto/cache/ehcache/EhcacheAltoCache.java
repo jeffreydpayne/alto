@@ -85,6 +85,13 @@ public class EhcacheAltoCache extends AsynchronousCacheSupport implements AltoCa
 	public void setKeyGenerator(CacheKeyGenerator keyGenerator) {
 		this.keyGenerator = keyGenerator;
 	}
+
+	@Override
+	public void clearAll() {
+		
+		cacheManager.clearAll();
+		
+	}
 	
 	
 

@@ -101,6 +101,13 @@ public class SimpleAltoCache extends AsynchronousCacheSupport implements AltoCac
 		this.keyGenerator = keyGenerator;
 	}
 
+	@Override
+	public void clearAll() {
+		
+		regionMap.clear();
+		
+	}
+
 	
 
 

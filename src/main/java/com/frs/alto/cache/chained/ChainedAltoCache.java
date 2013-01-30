@@ -69,6 +69,15 @@ public class ChainedAltoCache implements AltoCache {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	
+	
+
+	@Override
+	public void clearAll() {
+		// TODO Auto-generated method stub
+		
+	}
 
 	@Override
 	public CacheKeyGenerator getKeyGenerator() {

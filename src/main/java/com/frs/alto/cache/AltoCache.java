@@ -13,6 +13,7 @@ public interface AltoCache {
 	public boolean isCached(String region, String key);
 	public void remove(String region, String key);
 	public void clear(String region);	
+	public void clearAll();
 	public AltoCacheStatistics getStatistics(String region);
 	public AltoCacheStatistics getStatistics();
 	public void get(String region, String key, Future<Object> callback);
