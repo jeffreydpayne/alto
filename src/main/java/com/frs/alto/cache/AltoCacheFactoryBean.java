@@ -20,6 +20,7 @@ public class AltoCacheFactoryBean implements FactoryBean<AltoCache>, Application
 	private Log log = LogFactory.getLog(AltoCacheFactoryBean.class);
 	
 	private String altoCacheBeanId = null;
+	private boolean autoStartup = true;
 	
 	private ApplicationContext applicationContext = null;
 
@@ -35,7 +36,9 @@ public class AltoCacheFactoryBean implements FactoryBean<AltoCache>, Application
 		
 		AltoCache cache = applicationContext.getBean(getAltoCacheBeanId(), AltoCache.class);
 		log.info("Using Alto Cache Implementation: " + getAltoCacheBeanId() + "/" + cache.getClass().getName());
-		
+		if (autoStartup) {
+			cache.startup();
+		}
 		return cache;
 	}
 

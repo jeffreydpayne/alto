@@ -74,6 +74,24 @@ public class ChainedAltoCache implements AltoCache {
 	
 
 	@Override
+	public void startup() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void shutdown() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setAutoStartup(boolean autoStartup) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
 	public void clearAll() {
 		// TODO Auto-generated method stub
 		

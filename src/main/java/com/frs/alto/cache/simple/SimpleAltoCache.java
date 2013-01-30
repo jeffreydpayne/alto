@@ -108,6 +108,21 @@ public class SimpleAltoCache extends AsynchronousCacheSupport implements AltoCac
 		
 	}
 
+	@Override
+	public void startup() {
+		
+	}
+
+	@Override
+	public void shutdown() {
+		
+	}
+
+	@Override
+	public void setAutoStartup(boolean autoStartup) {
+			
+	}
+
 	
 
 

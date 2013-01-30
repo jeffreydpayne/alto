@@ -38,15 +38,16 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 	private boolean maintainRegions = false;
 	
 	private boolean flushOnStartup = false;
+	
+	private boolean autoStartup = false;
 		
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		super.afterPropertiesSet();
-		client = new MemcachedClient(new InetSocketAddress(getServerHost(), getPortNumber()));
 		
-		if (flushOnStartup) {
-			client.flush();
+		if (autoStartup) {
+			startup();
 		}
 		
 	}
@@ -208,6 +209,35 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 	public void clearAll() {
 		
 		client.flush();
+		
+	}
+	
+	
+
+	@Override
+	public void startup() {
+		
+		try {
+			client = new MemcachedClient(new InetSocketAddress(getServerHost(), getPortNumber()));
+			
+			if (flushOnStartup) {
+				client.flush();
+			}
+		}catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+	}
+
+	@Override
+	public void shutdown() {
+		client.shutdown();
+	}
+
+	@Override
+	public void setAutoStartup(boolean autoStartup) {
+		
+		this.autoStartup = autoStartup;
 		
 	}
 

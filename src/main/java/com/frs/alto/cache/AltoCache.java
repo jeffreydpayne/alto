@@ -8,6 +8,10 @@ import java.util.concurrent.Future;
  */
 public interface AltoCache {
 
+	
+	public void startup();
+	public void shutdown();
+	public void setAutoStartup(boolean autoStartup);
 	public Object get(String region, String key);
 	public void put(String region, String key, Object value);
 	public boolean isCached(String region, String key);

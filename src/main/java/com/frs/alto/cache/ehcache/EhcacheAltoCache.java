@@ -92,6 +92,21 @@ public class EhcacheAltoCache extends AsynchronousCacheSupport implements AltoCa
 		cacheManager.clearAll();
 		
 	}
+
+	@Override
+	public void startup() {
+		
+	}
+
+	@Override
+	public void shutdown() {
+		
+	}
+
+	@Override
+	public void setAutoStartup(boolean autoStartup) {
+		
+	}
 	
 	
 
