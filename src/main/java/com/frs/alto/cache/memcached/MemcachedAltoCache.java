@@ -251,6 +251,14 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 	public void setMaintainRegions(boolean maintainRegions) {
 		this.maintainRegions = maintainRegions;
 	}
+
+	public boolean isFlushOnStartup() {
+		return flushOnStartup;
+	}
+
+	public void setFlushOnStartup(boolean flushOnStartup) {
+		this.flushOnStartup = flushOnStartup;
+	}
 	
 
 }
