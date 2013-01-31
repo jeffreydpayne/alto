@@ -2,13 +2,17 @@ package com.frs.alto.nosql.ds.dynamodb;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -595,7 +599,15 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		Map<String, AttributeValue> results = new HashMap<String, AttributeValue>();
 		for (Entry<String, Object> entry : rawAttributes.entrySet()) {
 			if (entry.getValue() != null) {
-				results.put(entry.getKey(), new AttributeValue(entry.getValue().toString()));
+				if (entry.getValue() instanceof Number) {
+					results.put(entry.getKey(), new AttributeValue().withN(entry.getValue().toString()));
+				}
+				else if (entry.getValue() instanceof Collection) {
+					results.put(entry.getKey(), new AttributeValue().withSS((Collection<String>)entry.getValue()));
+				}
+				else {
+					results.put(entry.getKey(), new AttributeValue(entry.getValue().toString()));
+				}
 			}
 		}
 		
@@ -760,12 +772,63 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 	
 	@Override
 	public Object toAttributeValue(Object value, Class domainType) {
+		
+		if (value == null) {
+			return null;
+		}
+		
+		if (Date.class.isAssignableFrom(domainType)) {
+			
+			return (Long)((Date)value).getTime();
+			
+		}
+		else if (Boolean.class.isAssignableFrom(domainType)) {
+			return ((Boolean)value).booleanValue()?"Y":"N";
+		}
+
 		return value;
 	}
 
 	@Override
 	public Object toDomainValue(Object value, Class domainType) {
-		// TODO Auto-generated method stub
+		
+		AttributeValue attr = (AttributeValue)value;
+		
+		if (attr == null) {
+			return null; 
+		}
+		
+		if (Date.class.isAssignableFrom(domainType)) {
+			
+			return new Date(Long.parseLong(attr.getN()));
+			
+		}
+		else if (Number.class.isAssignableFrom(domainType)) {
+			try {
+				Number number = (Number)domainType.getConstructor(String.class).newInstance(attr.getN());
+				return number;
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		else if (Collection.class.isAssignableFrom(domainType)) {
+			List<String> result = attr.getSS();
+			if (Set.class.isAssignableFrom(domainType)) {
+				return new LinkedHashSet<String>(result);
+			}
+			else if (List.class.isAssignableFrom(domainType)) {
+				return result;
+			}
+		}
+		else if (Boolean.class.isAssignableFrom(domainType)) {
+			return attr.getS().equals("Y");
+		}
+		else {
+			return attr.getS();
+		}
+		
+		
 		return null;
 	}
 
