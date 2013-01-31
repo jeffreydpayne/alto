@@ -4,6 +4,6 @@ import java.util.Map;
 
 public interface ClassMappingConfigurationSource {
 		
-	public Map<Class, NoSqlClassMapping> configure();
+	public Map<Class, NoSqlClassMapping> configure() throws Exception;
 
 }

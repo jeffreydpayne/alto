@@ -34,6 +34,7 @@ public interface NoSqlDataSource {
 	public Collection<String> save(Collection<BaseDomainObject> domains, NoSqlObjectMapper mapper);
 	public Collection<String> findAllIds(Class<? extends BaseDomainObject> clazz, NoSqlObjectMapper mapper);
 	public Collection<BaseDomainObject> findAll(Class<? extends BaseDomainObject> clazz, NoSqlObjectMapper mapper);
+	public String nextId(BaseDomainObject domain);
 	
 
 }

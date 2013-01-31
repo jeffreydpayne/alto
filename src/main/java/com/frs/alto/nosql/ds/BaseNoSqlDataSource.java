@@ -9,7 +9,8 @@ public abstract class BaseNoSqlDataSource implements NoSqlDataSource {
 	private IdentifierGenerator identifierGenerator = new LocalUUIDGenerator();
 	private boolean autoCreateEnabled = false;
 	
-	protected String nextId(BaseDomainObject domain) {
+	@Override 
+	public String nextId(BaseDomainObject domain) {
 		return identifierGenerator.generateStringIdentifier(domain);
 	}
 
@@ -20,6 +21,14 @@ public abstract class BaseNoSqlDataSource implements NoSqlDataSource {
 
 	public void setAutoCreateEnabled(boolean autoCreateEnabled) {
 		this.autoCreateEnabled = autoCreateEnabled;
+	}
+
+	public IdentifierGenerator getIdentifierGenerator() {
+		return identifierGenerator;
+	}
+
+	public void setIdentifierGenerator(IdentifierGenerator identifierGenerator) {
+		this.identifierGenerator = identifierGenerator;
 	}
 	
 	

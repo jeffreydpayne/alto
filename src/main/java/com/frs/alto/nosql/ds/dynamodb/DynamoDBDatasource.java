@@ -48,8 +48,9 @@ import com.frs.alto.domain.BaseDomainObject;
 import com.frs.alto.nosql.ds.BaseNoSqlDataSource;
 import com.frs.alto.nosql.mapper.NoSqlKey;
 import com.frs.alto.nosql.mapper.NoSqlObjectMapper;
+import com.frs.alto.nosql.mapper.TypeTransformer;
 
-public class DynamoDBDatasource extends BaseNoSqlDataSource implements InitializingBean {
+public class DynamoDBDatasource extends BaseNoSqlDataSource implements InitializingBean, TypeTransformer {
 	
 	
 	private static Log log = LogFactory.getLog(DynamoDBDatasource.class);
@@ -430,7 +431,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 			KeySchema ks = new KeySchema().withHashKeyElement(hashKey);
 			
 			if (mapper.getRangeKeyAttribute(clazz) != null) {
-				KeySchemaElement rangeKey = new KeySchemaElement().withAttributeName(mapper.getHashKeyAttribute(clazz)).withAttributeType(fromClass(mapper.getRangeKeyType(clazz)));
+				KeySchemaElement rangeKey = new KeySchemaElement().withAttributeName(mapper.getRangeKeyAttribute(clazz)).withAttributeType(fromClass(mapper.getRangeKeyType(clazz)));
 				ks = ks.withRangeKeyElement(rangeKey);
 			}
 			
@@ -464,8 +465,8 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 	}
 	@Override
 	public boolean tableExists(Class<? extends BaseDomainObject> clazz, NoSqlObjectMapper mapper) {
-		
-		return tableNames.contains(mapper.getTableName(clazz));
+		String tableName = assembleTableName(clazz, mapper);
+		return tableNames.contains(tableName);
 		
 	}
 	@Override
@@ -593,8 +594,9 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		
 		Map<String, AttributeValue> results = new HashMap<String, AttributeValue>();
 		for (Entry<String, Object> entry : rawAttributes.entrySet()) {
-			results.put(entry.getKey(), new AttributeValue(entry.getValue().toString()));
-			
+			if (entry.getValue() != null) {
+				results.put(entry.getKey(), new AttributeValue(entry.getValue().toString()));
+			}
 		}
 		
 		return results;
@@ -747,6 +749,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 	protected BaseDomainObject instantiate(Class<? extends BaseDomainObject> clazz, NoSqlObjectMapper mapper, Map<String, AttributeValue> map) {
 		
 		BaseDomainObject domain = mapper.instantiate(clazz);
+		
 		mapper.fromAttributes(domain, (Map)map);
 		
 		return domain;
@@ -755,6 +758,17 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 	
 	
 	
+	@Override
+	public Object toAttributeValue(Object value, Class domainType) {
+		return value;
+	}
+
+	@Override
+	public Object toDomainValue(Object value, Class domainType) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	public String getTableSpace() {
 		return tableSpace;
 	}

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://www.flexrentalsolutions.com/alto/nosql/1.0.0" xmlns="http://www.flexrentalsolutions.com/alto/nosql/1.0.0">
+
+    <xs:element name="nosql-mappings">
+	    <xs:complexType>
+	    	<xs:sequence>
+	    		<xs:element name="package" type="PackageMapping" minOccurs="0" maxOccurs="unbounded"/>
+		    	<xs:element name="class" type="ClassMapping" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+	    </xs:complexType> 
+	</xs:element>
+	
+	<xs:complexType name="PackageMapping">
+		<xs:sequence>
+			<xs:element name="class" type="ClassMapping" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="xs:string"/>	
+	</xs:complexType>
+	
+	<xs:complexType name="ClassMapping">
+		<xs:sequence>
+			<xs:element name="cache">
+				<xs:complexType>
+					<xs:attribute name="region" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>	
+			<xs:element name="hash-key" type="AttributeMapping" minOccurs="1" maxOccurs="1"/>
+			<xs:element name="range-key" type="AttributeMapping" minOccurs="0" maxOccurs="1"/>
+			<xs:element name="attribute" type="AttributeMapping" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="class-name" type="xs:string"/>
+		<xs:attribute name="table-name" type="xs:string"/>
+	</xs:complexType>
+	
+	
+	<xs:complexType name="AttributeMapping">
+		<xs:attribute name="domain-property" type="xs:string"/>
+		<xs:attribute name="table-attribute" type="xs:string"/>
+	</xs:complexType>
+
+</xs:schema>

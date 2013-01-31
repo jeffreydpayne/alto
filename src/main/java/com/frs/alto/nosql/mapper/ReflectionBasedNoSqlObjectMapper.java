@@ -30,7 +30,7 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 			throw new IllegalStateException("No class mapping found for class: " + clazz.getName());
 		}
 		
-		return mapping.getHashKeyAttribute();
+		return mapping.getHashKeyProperty();
 	}
 
 	
@@ -186,16 +186,22 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 			throw new IllegalStateException("No class mapping found for class: " + object.getClass().getName());
 		}
 		
-		for (Entry<String, String> entry : mapping.getPropertyToAttributeNameMap().entrySet()) {
-			try {
-				map.put(entry.getValue(), typeTransformer.toAttributeType(PropertyUtils.getProperty(object, entry.getKey()), PropertyUtils.getPropertyType(object, entry.getKey())));
+		try {
+			map.put(mapping.getHashKeyAttribute(), typeTransformer.toAttributeValue(PropertyUtils.getProperty(object, mapping.getHashKeyProperty()), PropertyUtils.getPropertyType(object, mapping.getHashKeyProperty())));
+			if (mapping.getRangeKeyProperty() != null) {
+				map.put(mapping.getRangeKeyAttribute(), typeTransformer.toAttributeValue(PropertyUtils.getProperty(object, mapping.getRangeKeyProperty()), PropertyUtils.getPropertyType(object, mapping.getRangeKeyProperty())));
+				
 			}
-			catch (Exception e) {
-				throw new RuntimeException(e);
+			for (Entry<String, String> entry : mapping.getPropertyToAttributeNameMap().entrySet()) {
+				
+					map.put(entry.getValue(), typeTransformer.toAttributeValue(PropertyUtils.getProperty(object, entry.getKey()), PropertyUtils.getPropertyType(object, entry.getKey())));
+				}
+				
 			}
+		
+		catch (Exception e) {
+			throw new RuntimeException(e);
 		}
-		
-		
 		
 		return map;
 	}
@@ -217,18 +223,42 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 		if (mapping == null) {
 			throw new IllegalStateException("No class mapping found for class: " + instance.getClass().getName());
 		}
-		
-		
-		for (Entry<String, String> entry : mapping.getPropertyToAttributeNameMap().entrySet()) {
-			try {
-				Object propValue = typeTransformer.toDomainValue(attributes.get(entry.getValue()), PropertyUtils.getPropertyType(instance, entry.getKey()));
-				PropertyUtils.setProperty(instance, entry.getKey(), propValue);
+		try {
+			Object propValue = typeTransformer.toDomainValue(attributes.get(mapping.getHashKeyAttribute()), PropertyUtils.getPropertyType(instance, mapping.getHashKeyProperty()));
+			PropertyUtils.setProperty(instance, mapping.getHashKeyProperty(), propValue);
+			if (mapping.getRangeKeyProperty() != null) {
+				propValue = typeTransformer.toDomainValue(attributes.get(mapping.getRangeKeyAttribute()), PropertyUtils.getPropertyType(instance, mapping.getRangeKeyProperty()));
+				PropertyUtils.setProperty(instance, mapping.getRangeKeyProperty(), propValue);
 			}
-			catch (Exception e) {
-				throw new RuntimeException(e);
+			for (Entry<String, String> entry : mapping.getPropertyToAttributeNameMap().entrySet()) {
+				
+					propValue = typeTransformer.toDomainValue(attributes.get(entry.getValue()), PropertyUtils.getPropertyType(instance, entry.getKey()));
+					PropertyUtils.setProperty(instance, entry.getKey(), propValue);
+				}
+				
 			}
+		
+		catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 		return null;
+	}
+
+	public ClassMappingConfigurationSource getConfigurationSource() {
+		return configurationSource;
+	}
+
+	public void setConfigurationSource(
+			ClassMappingConfigurationSource configurationSource) {
+		this.configurationSource = configurationSource;
+	}
+
+	public TypeTransformer getTypeTransformer() {
+		return typeTransformer;
+	}
+
+	public void setTypeTransformer(TypeTransformer typeTransformer) {
+		this.typeTransformer = typeTransformer;
 	}
 	
 	

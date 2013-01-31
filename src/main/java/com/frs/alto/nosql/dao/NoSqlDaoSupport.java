@@ -20,12 +20,19 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 	
 	protected abstract NoSqlObjectMapper getObjectMapper();
 	
+	protected Collection<T> generateSeedData() {
+		return null;
+	}
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		
 		if (dataSource.isAutoCreateEnabled() && !dataSource.tableExists(getDomainClass(), getObjectMapper())) {
 			dataSource.createTable(getDomainClass(), getObjectMapper());
+			Collection<T> results = generateSeedData();
+			if (results != null) {
+				save(results);
+			}
 		}
 		
 	}
@@ -125,7 +132,7 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 	}
 
 	@Override
-	public String save(BaseDomainObject domain) {
+	public String save(T domain) {
 		return dataSource.save(domain, getObjectMapper());
 	}
 

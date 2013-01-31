@@ -3,7 +3,7 @@ package com.frs.alto.nosql.mapper;
 public class PassthroughTypeTransformer implements TypeTransformer {
 
 	@Override
-	public Object toAttributeType(Object value, Class domainType) {
+	public Object toAttributeValue(Object value, Class domainType) {
 		return value;
 	}
 

@@ -1,5 +1,7 @@
 package com.frs.alto.nosql.dao;
 
+import java.io.Serializable;
+
 import com.frs.alto.domain.BaseDomainObject;
 import com.frs.alto.nosql.mapper.NoSqlObjectMapper;
 
@@ -13,7 +15,7 @@ import com.frs.alto.nosql.mapper.NoSqlObjectMapper;
  * @param <R>
  */
 
-public abstract class ExternalMapperNoSqlDaoSupport<T extends BaseDomainObject, R extends Number & CharSequence> extends NoSqlDaoSupport<T, R> {
+public abstract class ExternalMapperNoSqlDaoSupport<T extends BaseDomainObject, R extends Serializable> extends NoSqlDaoSupport<T, R> {
 	
 	private NoSqlObjectMapper objectMapper;
 

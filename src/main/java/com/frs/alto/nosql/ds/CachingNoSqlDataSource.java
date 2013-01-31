@@ -22,8 +22,15 @@ public class CachingNoSqlDataSource implements NoSqlDataSource {
 
 	private AltoCache cache = null;
 	private NoSqlDataSource proxiedDatasource = null;
+	
+	
 		
 	
+	@Override
+	public String nextId(BaseDomainObject domain) {
+		return proxiedDatasource.nextId(domain);
+	}
+
 	@Override
 	public BaseDomainObject findByKey(Class<? extends BaseDomainObject> clazz, NoSqlObjectMapper mapper, NoSqlKey key) {
 		
