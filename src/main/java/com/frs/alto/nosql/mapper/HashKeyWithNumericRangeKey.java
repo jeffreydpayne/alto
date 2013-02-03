@@ -12,7 +12,7 @@ public class HashKeyWithNumericRangeKey implements NoSqlKey<Number> {
 	
 	@Override
 	public String composeUniqueString() {
-		return hashKey;
+		return hashKey + "#" + number.toString();
 	}
 
 	@Override

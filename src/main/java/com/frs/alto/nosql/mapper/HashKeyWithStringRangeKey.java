@@ -13,7 +13,7 @@ public class HashKeyWithStringRangeKey implements NoSqlKey<String> {
 	
 	@Override
 	public String composeUniqueString() {
-		return hashKey;
+		return hashKey + "#" + rangeKey;
 	}
 
 	@Override
