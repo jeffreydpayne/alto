@@ -26,7 +26,6 @@ import com.amazonaws.services.simpledb.model.BatchPutAttributesRequest;
 import com.amazonaws.services.simpledb.model.CreateDomainRequest;
 import com.amazonaws.services.simpledb.model.DeletableItem;
 import com.amazonaws.services.simpledb.model.DeleteAttributesRequest;
-import com.amazonaws.services.simpledb.model.DeleteDomainRequest;
 import com.amazonaws.services.simpledb.model.GetAttributesRequest;
 import com.amazonaws.services.simpledb.model.GetAttributesResult;
 import com.amazonaws.services.simpledb.model.Item;
@@ -463,6 +462,9 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 				Map<String, Object> map = mapper.toAttributes(domain);
 				
 				if (map.get(hashKeyAttribute) == null) {
+					if (rangeKeyProperty != null) {
+						throw new IllegalStateException("Cannot automatically generate a hash key for objects that have a range key.");
+					}
 					String id = nextId(domain);
 					map.put(hashKeyAttribute, id);
 					PropertyUtils.setProperty(domain, hashKeyProperty, id);
@@ -643,6 +645,9 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 		}
 		else if (Boolean.class.isAssignableFrom(domainType)) {
 			return valueString.equals("Y");
+		}
+		else if (domainType.isEnum()) {
+			return Enum.valueOf(domainType, valueString);
 		}
 		else {
 			return valueString;
