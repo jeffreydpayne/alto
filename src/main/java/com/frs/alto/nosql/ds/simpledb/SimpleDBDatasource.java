@@ -543,17 +543,29 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 		
 		request.withSelectExpression(query);
 		request.withConsistentRead(consistentReads);
-		
-		SelectResult result = getClient().select(request);
+	
 		
 
 		Collection<BaseDomainObject> results = new ArrayList<BaseDomainObject>();
-
+		
+		SelectResult result = getClient().select(request);
+		
 		if (result.getItems() != null) {
 			for (Item item : result.getItems()) {
 				results.add(instantiate(clazz, mapper, item.getAttributes()));
 			}
 		}
+		
+		while (result.getNextToken() != null) {
+			request.setNextToken(result.getNextToken());
+			result = getClient().select(request);
+			if (result.getItems() != null) {
+				for (Item item : result.getItems()) {
+					results.add(instantiate(clazz, mapper, item.getAttributes()));
+				}
+			}
+		}
+			
 				
 		return results;
 		
@@ -644,7 +656,7 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 			}
 		}
 		else if (Boolean.class.isAssignableFrom(domainType)) {
-			return valueString.equals("Y");
+			return valueString.equals("Y") || valueString.equals("true");
 		}
 		else if (domainType.isEnum()) {
 			return Enum.valueOf(domainType, valueString);

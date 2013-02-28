@@ -24,6 +24,14 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 		return null;
 	}
 	
+	
+	
+	
+	@Override
+	public String nextId(BaseDomainObject domain) {
+		return getDataSource().nextId(domain);
+	}
+
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		

@@ -19,5 +19,6 @@ public interface NoSqlDao<T extends BaseDomainObject, R extends Serializable> ex
 	public void delete(Collection<String> hashKeys);
 	public String save(T domain);
 	public Collection<String> save(Collection<T> domains);
+	public String nextId(BaseDomainObject domain);
 	
 }
