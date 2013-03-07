@@ -1,12 +1,16 @@
 package com.frs.alto.domain;
 
+import java.io.Serializable;
+
 
 /**
  * @author Jeffrey Payne
  *
  */
 
-public abstract class BaseDomainObject {
+public abstract class BaseDomainObject implements Serializable {
+	
+	private static final long serialVersionUID = 42L;
 	
 	private String objectIdentifier = null;
 	
