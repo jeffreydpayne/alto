@@ -1,5 +1,6 @@
 package com.frs.alto.nosql.mapper;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -160,6 +161,13 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 				return new HashKeyWithNumericRangeKey(
 						(String)PropertyUtils.getProperty(instance, mapping.getHashKeyProperty()), 
 						(Number)PropertyUtils.getProperty(instance, mapping.getRangeKeyProperty())
+						);
+			}
+			else if (Date.class.isAssignableFrom(mapping.getRangeKeyType())) {
+				Date rangeValue = (Date)PropertyUtils.getProperty(instance, mapping.getRangeKeyProperty());
+				return new HashKeyWithNumericRangeKey(
+						(String)PropertyUtils.getProperty(instance, mapping.getHashKeyProperty()), 
+						rangeValue.getTime()
 						);
 			}
 			else if (String.class.isAssignableFrom(mapping.getRangeKeyType())) {

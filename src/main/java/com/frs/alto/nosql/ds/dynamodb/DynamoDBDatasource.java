@@ -416,6 +416,9 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		if (Number.class.isAssignableFrom(clazz)) {
 			return ScalarAttributeType.N;
 		}
+		else if (Date.class.isAssignableFrom(clazz)) {
+			return ScalarAttributeType.N;
+		}
 		else {
 			return ScalarAttributeType.S;
 		}
