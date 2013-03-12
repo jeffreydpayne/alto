@@ -3,6 +3,7 @@ package com.frs.alto.nosql.dao;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 
 import org.springframework.beans.factory.InitializingBean;
 
@@ -106,6 +107,9 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 		
 		if (Number.class.isAssignableFrom(type)) {
 			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, (Number)startRange);
+		}
+		else if (Date.class.isAssignableFrom(type)) {
+			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, ((Date)startRange).getTime());
 		}
 		else {
 			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, (String)startRange);

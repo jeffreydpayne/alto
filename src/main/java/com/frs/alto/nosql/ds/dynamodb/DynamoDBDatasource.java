@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.collections.ListUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -329,7 +330,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		
 		Condition condition = new Condition();
 		condition.withComparisonOperator(ComparisonOperator.BETWEEN);
-		condition.withAttributeValueList(new AttributeValue(startRange.toString()), new AttributeValue(endRange.toString()));
+		condition.withAttributeValueList(new AttributeValue().withN(startRange.toString()), new AttributeValue().withN(endRange.toString()));
 		
 		request.setRangeKeyCondition(condition);
 		
@@ -358,7 +359,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		
 		Condition condition = new Condition();
 		condition.withComparisonOperator(ComparisonOperator.GE);
-		condition.withAttributeValueList(new AttributeValue(startRange.toString()));
+		condition.withAttributeValueList(new AttributeValue().withN(startRange.toString()));
 		
 		request.setRangeKeyCondition(condition);
 		
@@ -387,7 +388,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		
 		Condition condition = new Condition();
 		condition.withComparisonOperator(ComparisonOperator.LE);
-		condition.withAttributeValueList(new AttributeValue(endRange.toString()));
+		condition.withAttributeValueList(new AttributeValue().withN(endRange.toString()));
 		
 		request.setRangeKeyCondition(condition);
 		
@@ -808,7 +809,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		}
 		else if (Number.class.isAssignableFrom(domainType)) {
 			try {
-				Number number = (Number)domainType.getConstructor(String.class).newInstance(attr.getN());
+				Number number = (Number)NumberUtils.createNumber(attr.getN());
 				return number;
 			}
 			catch (Exception e) {
@@ -826,6 +827,9 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		}
 		else if (Boolean.class.isAssignableFrom(domainType)) {
 			return attr.getS().equals("Y");
+		}
+		else if (domainType.isEnum()) {
+			return Enum.valueOf(domainType, attr.getS());
 		}
 		else {
 			return attr.getS();
