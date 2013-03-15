@@ -12,8 +12,8 @@
     <hibernate.version>4.1.7.Final</hibernate.version>
   </properties>
   <scm>
-    <connection>https://github.com/alto-project/alto.git</connection>
-    <developerConnection>https://github.com/alto-project/alto.git</developerConnection>
+    <connection>scm:git:https://github.com/alto-project/alto.git</connection>
+    <developerConnection>scm:git:https://github.com/alto-project/alto.git</developerConnection>
     <url>http://github.com/alto-project/alto</url>
   </scm>
   <distributionManagement>
