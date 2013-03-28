@@ -24,6 +24,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.web.context.HttpRequestResponseHolder;
 
 import com.frs.alto.cache.AltoCache;
+import com.frs.alto.security.hmac.HmacPrincipal;
 import com.frs.alto.web.ClientType;
 import com.frs.alto.web.ClientTypeResolver;
 import com.frs.alto.web.NullClientTypeResolver;
@@ -190,6 +191,10 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 				
 		
 		if (!(context instanceof ClusterSecurityContext)) {
+			return;
+		}
+		
+		if (context.getAuthentication().getCredentials() instanceof HmacPrincipal) {
 			return;
 		}
 		
