@@ -194,7 +194,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 			return;
 		}
 		
-		if (context.getAuthentication().getCredentials() instanceof HmacPrincipal) {
+		if ( (context.getAuthentication() != null) && (context.getAuthentication().getCredentials() instanceof HmacPrincipal) ) {
 			return;
 		}
 		

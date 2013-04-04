@@ -6,6 +6,8 @@ import java.util.TreeMap;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang.StringUtils;
+
 /**
  * 
  * The default string assembler creates a string consisting of the request path,
@@ -49,15 +51,18 @@ public class DefaultHmacStringAssembler implements HmacStringAssembler {
 		}
 
 		Map<String, String> sortedParams = new TreeMap<String, String>();
-		Enumeration<String> params = request.getParameterNames();
-		String key = null;
-		while (params.hasMoreElements()) {
-			key = params.nextElement();
-			sortedParams.put(key, request.getParameter(key));
-		}
-
-		for (String value : sortedParams.values()) {
-			sb.append(value + "\n");
+		String[] tokens = StringUtils.split(request.getQueryString(), "&");
+		if (tokens != null) {
+			String key = null;
+			
+			for (String param : tokens) {
+				key = StringUtils.split(param, "=")[0];
+				sortedParams.put(key, request.getParameter(key));
+			}
+	
+			for (String value : sortedParams.values()) {
+				sb.append(value + "\n");
+			}
 		}
 
 		return sb.toString();
