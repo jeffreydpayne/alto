@@ -659,7 +659,7 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 			return valueString.equals("Y") || valueString.equals("true");
 		}
 		else if (domainType.isEnum()) {
-			return Enum.valueOf(domainType, valueString);
+			return Enum.valueOf(domainType, valueString.toUpperCase());
 		}
 		else {
 			return valueString;
