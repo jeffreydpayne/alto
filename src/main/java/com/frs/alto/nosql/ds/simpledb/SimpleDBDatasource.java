@@ -1,5 +1,7 @@
 package com.frs.alto.nosql.ds.simpledb;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -8,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -43,6 +46,7 @@ import com.frs.alto.nosql.mapper.TypeTransformer;
 
 public class SimpleDBDatasource extends BaseNoSqlDataSource implements InitializingBean, TypeTransformer {
 	
+	private static SimpleDateFormat ISO_TS_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 	
 	private static Log log = LogFactory.getLog(SimpleDBDatasource.class);
 	
@@ -61,6 +65,7 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 	public void afterPropertiesSet() throws Exception {
 		
 		refreshTableNames();
+		ISO_TS_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
 		
 	}
 
@@ -612,9 +617,7 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 		}
 		
 		if (Date.class.isAssignableFrom(domainType)) {
-			
-			return (Long)((Date)value).getTime();
-			
+			return formatTimeStamp((Date)value);
 		}
 		else if (Boolean.class.isAssignableFrom(domainType)) {
 			return ((Boolean)value).booleanValue()?"Y":"N";
@@ -633,8 +636,12 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 		String valueString = (String)value;
 		
 		if (Date.class.isAssignableFrom(domainType)) {
+			Date result = parseTimeStamp(valueString);
+			if (result == null) {
+				result = new Date(Long.parseLong(valueString));
+			}
+			return result;
 			
-			return new Date(Long.parseLong(valueString));
 			
 		}
 		else if (Number.class.isAssignableFrom(domainType)) {
@@ -675,6 +682,34 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 
 	public void setConsistentReads(boolean consistentReads) {
 		this.consistentReads = consistentReads;
+	}
+
+	@Override
+	public Date parseTimeStamp(String value) {
+		if (value == null) {
+			return null;
+		}
+		
+		try {
+			return ISO_TS_FORMAT.parse(value);
+		}
+		catch (ParseException ex) {
+			return null;
+		}
+		catch (NumberFormatException ex) {
+			return null;
+		}
+
+	}
+
+	@Override
+	public String formatTimeStamp(Date date) {
+		if (date != null) {
+			return ISO_TS_FORMAT.format(date);
+		}
+		else {
+			return null;
+		}
 	}
 
 	

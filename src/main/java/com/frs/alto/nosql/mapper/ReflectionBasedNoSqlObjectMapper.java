@@ -165,9 +165,9 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 			}
 			else if (Date.class.isAssignableFrom(mapping.getRangeKeyType())) {
 				Date rangeValue = (Date)PropertyUtils.getProperty(instance, mapping.getRangeKeyProperty());
-				return new HashKeyWithNumericRangeKey(
+				return new HashKeyWithStringRangeKey(
 						(String)PropertyUtils.getProperty(instance, mapping.getHashKeyProperty()), 
-						rangeValue.getTime()
+						typeTransformer.formatTimeStamp(rangeValue)
 						);
 			}
 			else if (String.class.isAssignableFrom(mapping.getRangeKeyType())) {
