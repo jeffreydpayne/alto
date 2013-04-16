@@ -61,7 +61,7 @@ import com.frs.alto.nosql.mapper.TypeTransformer;
 public class DynamoDBDatasource extends BaseNoSqlDataSource implements InitializingBean, TypeTransformer {
 	
 	
-	private static SimpleDateFormat ISO_TS_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+	private static SimpleDateFormat ISO_TS_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
 	
 	private static Log log = LogFactory.getLog(DynamoDBDatasource.class);
 	
@@ -421,9 +421,6 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 	protected ScalarAttributeType fromClass(Class clazz) {
 				
 		if (Number.class.isAssignableFrom(clazz)) {
-			return ScalarAttributeType.N;
-		}
-		else if (Date.class.isAssignableFrom(clazz)) {
 			return ScalarAttributeType.N;
 		}
 		else {

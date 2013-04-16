@@ -46,7 +46,7 @@ import com.frs.alto.nosql.mapper.TypeTransformer;
 
 public class SimpleDBDatasource extends BaseNoSqlDataSource implements InitializingBean, TypeTransformer {
 	
-	private static SimpleDateFormat ISO_TS_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+	private static SimpleDateFormat ISO_TS_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
 	
 	private static Log log = LogFactory.getLog(SimpleDBDatasource.class);
 	
@@ -638,7 +638,9 @@ public class SimpleDBDatasource extends BaseNoSqlDataSource implements Initializ
 		if (Date.class.isAssignableFrom(domainType)) {
 			Date result = parseTimeStamp(valueString);
 			if (result == null) {
-				result = new Date(Long.parseLong(valueString));
+				try {
+					result = new Date(Long.parseLong(valueString));
+				} catch (Exception e) {}
 			}
 			return result;
 			
