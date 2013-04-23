@@ -61,8 +61,6 @@ import com.frs.alto.nosql.mapper.TypeTransformer;
 public class DynamoDBDatasource extends BaseNoSqlDataSource implements InitializingBean, TypeTransformer {
 	
 	
-	private static SimpleDateFormat ISO_TS_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-	
 	private static Log log = LogFactory.getLog(DynamoDBDatasource.class);
 	
 	private String tableSpace = null;
@@ -82,9 +80,10 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 	public void afterPropertiesSet() throws Exception {
 		
 		refreshTableNames();
-		ISO_TS_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
 		
 	}
+	
+
 
 	public AWSCredentials getCredentials() {
 		if (credentials == null) {
@@ -887,35 +886,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		this.maxBatchSize = maxBatchSize;
 	}
 
-	@Override
-	public Date parseTimeStamp(String value) {
-		
-		if (value == null) {
-			return null;
-		}
-		
-		try {
-			return ISO_TS_FORMAT.parse(value);
-		}
-		catch (ParseException ex) {
-			return null;
-		}
-		catch (NumberFormatException ex) {
-			return null;
-		}
-
-
-	}
-
-	@Override
-	public String formatTimeStamp(Date date) {
-		if (date != null) {
-			return ISO_TS_FORMAT.format(date);
-		}
-		else {
-			return null;
-		}
-	}
+	
 
 	
 	
