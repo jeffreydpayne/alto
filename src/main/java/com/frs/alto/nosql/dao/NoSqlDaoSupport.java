@@ -1,6 +1,7 @@
 package com.frs.alto.nosql.dao;
 
 import java.io.Serializable;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,7 +17,7 @@ import com.frs.alto.nosql.mapper.NoSqlObjectMapper;
 
 public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Serializable> implements NoSqlDao<T, R>, InitializingBean {
 	
-	private static SimpleDateFormat ISO_TS_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+	private static String ISO_TS_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS";
 
 	private NoSqlDataSource dataSource;
 	
@@ -29,7 +30,24 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 		return null;
 	}
 	
+	protected DateFormat getDateFormat() {
+		DateFormat fmt = new SimpleDateFormat(ISO_TS_FORMAT);
+		fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+		return fmt;
+	}
 	
+	protected String formatDate(Date dt) {
+		return getDateFormat().format(dt);
+	}
+	
+	protected Date parseDate(String dt) {
+		try {
+			return getDateFormat().parse(dt);
+		}
+		catch (Exception e) {
+			return null;
+		}
+	}
 	
 	
 	@Override
@@ -39,8 +57,6 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		
-		ISO_TS_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
 		
 		if (dataSource.isAutoCreateEnabled() && !dataSource.tableExists(getDomainClass(), getObjectMapper())) {
 			dataSource.createTable(getDomainClass(), getObjectMapper());
@@ -61,6 +77,23 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 	public T findById(String id) {
 		NoSqlKey key = getObjectMapper().getKey(getDomainClass(), id);
 		return (T)dataSource.findByKey(getDomainClass(), getObjectMapper(), key);
+	}
+	
+	@Override
+	public T findById(String hashKey, R rangeKey) {
+		
+		StringBuilder sb = new StringBuilder(hashKey + "#");
+						
+		if (Date.class.isAssignableFrom(rangeKey.getClass())) {
+			sb.append(formatDate((Date)rangeKey));
+		}
+		else {
+			sb.append((String)rangeKey);
+		}
+		
+		NoSqlKey key = getObjectMapper().getKey(getDomainClass(), sb.toString());
+		return (T)dataSource.findByKey(getDomainClass(), getObjectMapper(), key);
+		
 	}
 
 	@Override
@@ -103,7 +136,7 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 			return (Collection<T>)dataSource.findByRange(getDomainClass(), getObjectMapper(), hashKey, (Number)startRange, (Number)endRange);
 		}
 		else if (Date.class.isAssignableFrom(type)) {
-			return (Collection<T>)dataSource.findByRange(getDomainClass(), getObjectMapper(), hashKey, ISO_TS_FORMAT.format((Date)startRange), ISO_TS_FORMAT.format((Date)endRange));
+			return (Collection<T>)dataSource.findByRange(getDomainClass(), getObjectMapper(), hashKey, formatDate((Date)startRange), formatDate((Date)endRange));
 		}
 		else {
 			return (Collection<T>)dataSource.findByRange(getDomainClass(), getObjectMapper(), hashKey, (String)startRange, (String)endRange);
@@ -118,7 +151,7 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, (Number)startRange);
 		}
 		else if (Date.class.isAssignableFrom(type)) {
-			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, ISO_TS_FORMAT.format((Date)startRange));
+			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, formatDate((Date)startRange));
 		}
 		else {
 			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, (String)startRange);
@@ -133,7 +166,7 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 			return (Collection<T>)dataSource.findByLowerRange(getDomainClass(), getObjectMapper(), hashKey, (Number)endRange);
 		}
 		else if (Date.class.isAssignableFrom(type)) {
-			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, ISO_TS_FORMAT.format((Date)endRange));
+			return (Collection<T>)dataSource.findByUpperRange(getDomainClass(), getObjectMapper(), hashKey, formatDate((Date)endRange));
 		}
 		else {
 			return (Collection<T>)dataSource.findByLowerRange(getDomainClass(), getObjectMapper(), hashKey, (String)endRange);

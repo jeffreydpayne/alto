@@ -16,6 +16,7 @@ import java.util.Set;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.collections.ListUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -273,12 +274,12 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		String tableName = assembleTableName(clazz, mapper);
 		
 		QueryRequest request = new QueryRequest(tableName, new AttributeValue(hashKey));
+    
+	    Condition rangeKeyCondition = new Condition()
+	        .withComparisonOperator(ComparisonOperator.GE.toString())
+	        .withAttributeValueList(new AttributeValue().withS(startRange));			    
 		
-		Condition condition = new Condition();
-		condition.withComparisonOperator(ComparisonOperator.GE);
-		condition.withAttributeValueList(new AttributeValue(startRange));
-		
-		request.setRangeKeyCondition(condition);
+        request.withRangeKeyCondition(rangeKeyCondition);
 		
 		QueryResult result = getClient().query(request);
 		
@@ -611,7 +612,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 				else if (entry.getValue() instanceof Collection) {
 					results.put(entry.getKey(), new AttributeValue().withSS((Collection<String>)entry.getValue()));
 				}
-				else {
+				else if (StringUtils.isNotBlank(entry.getValue().toString())) {
 					results.put(entry.getKey(), new AttributeValue(entry.getValue().toString()));
 				}
 			}

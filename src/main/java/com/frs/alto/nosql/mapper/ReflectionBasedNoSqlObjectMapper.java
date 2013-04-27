@@ -131,6 +131,12 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 						num
 						);
 			}
+			else if (Date.class.isAssignableFrom(mapping.getRangeKeyType())) {
+				return new HashKeyWithStringRangeKey(
+						tokens[0], 
+						tokens[1]
+						);
+			}
 			else if (String.class.isAssignableFrom(mapping.getRangeKeyType())) {
 				return new HashKeyWithStringRangeKey(
 						tokens[0], 

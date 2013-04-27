@@ -10,6 +10,7 @@ public interface NoSqlDao<T extends BaseDomainObject, R extends Serializable> ex
 
 	
 	public T findByHashKey(String hashKey);
+	public T findById(String hashKey, R rangeKey);
 	public Collection<T> findByHashKeys(Collection<String> hashKeys);
 	public Collection<T> findWholeRange(String hashKey);
 	public Collection<T> findByRange(String hashKey, R startRange, R endRange);
