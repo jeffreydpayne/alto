@@ -415,7 +415,13 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 	}
 	
 	protected String assembleTableName(Class clazz, NoSqlObjectMapper mapper) {
-		return getTableSpace() + "-" + mapper.getTableName(clazz);
+		String tableName = mapper.getTableName(clazz);
+		if (tableName != null) {
+			return getTableSpace() + "-" + mapper.getTableName(clazz);
+		}
+		else {
+			return null;
+		}
 	}
 	
 	protected ScalarAttributeType fromClass(Class clazz) {
@@ -434,7 +440,7 @@ public class DynamoDBDatasource extends BaseNoSqlDataSource implements Initializ
 		
 		String tableName = assembleTableName(clazz, mapper);
 		
-		if (!tableNames.contains(tableName)) {
+		if ( (tableName != null) && !tableNames.contains(tableName)) {
 			log.info("Creating table: " + tableName);
 			
 			

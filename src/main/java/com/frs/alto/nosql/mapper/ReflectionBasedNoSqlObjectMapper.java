@@ -16,6 +16,7 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 	private ClassMappingConfigurationSource configurationSource = null;
 	private Map<Class, NoSqlClassMapping> configuration = null;
 	private TypeTransformer typeTransformer = new PassthroughTypeTransformer();
+	private boolean missingMappingsFatal = true;
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
@@ -39,7 +40,13 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 	public String getHashKeyAttribute(Class clazz) {
 		NoSqlClassMapping mapping = configuration.get(clazz);
 		if (mapping == null) {
-			throw new IllegalStateException("No class mapping found for class: " + clazz.getName());
+			if (isMissingMappingsFatal()) {
+				throw new IllegalStateException("No class mapping found for class: " + clazz.getName());
+			}
+			else {
+				return null;
+			}
+			
 		}
 		
 		return mapping.getHashKeyAttribute();
@@ -51,7 +58,12 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 	public String getRangeKeyAttribute(Class clazz) {
 		NoSqlClassMapping mapping = configuration.get(clazz);
 		if (mapping == null) {
-			throw new IllegalStateException("No class mapping found for class: " + clazz.getName());
+			if (isMissingMappingsFatal()) {
+				throw new IllegalStateException("No class mapping found for class: " + clazz.getName());
+			}
+			else {
+				return null;
+			}
 		}
 		
 		return mapping.getRangeKeyAttribute();
@@ -72,8 +84,14 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 	@Override
 	public String getTableName(Class clazz) {
 		NoSqlClassMapping mapping = configuration.get(clazz);
-		if (mapping == null) {
-			throw new IllegalStateException("No class mapping found for class: " + clazz.getName());
+		
+		if ( mapping == null) {
+			if (isMissingMappingsFatal() ) {
+				throw new IllegalStateException("No class mapping found for class: " + clazz.getName());
+			}
+			else {
+				return null;
+			}
 		}
 		
 		return mapping.getTableName();
@@ -273,6 +291,14 @@ public class ReflectionBasedNoSqlObjectMapper implements NoSqlObjectMapper, Init
 
 	public void setTypeTransformer(TypeTransformer typeTransformer) {
 		this.typeTransformer = typeTransformer;
+	}
+
+	public boolean isMissingMappingsFatal() {
+		return missingMappingsFatal;
+	}
+
+	public void setMissingMappingsFatal(boolean missingMappingsFatal) {
+		this.missingMappingsFatal = missingMappingsFatal;
 	}
 	
 	
