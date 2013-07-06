@@ -13,6 +13,7 @@ public abstract class BaseDomainObject implements Serializable {
 	private static final long serialVersionUID = 42L;
 	
 	private String objectIdentifier = null;
+	private String versionHash = null;
 	
 	private boolean persistent = false;
 	
@@ -73,5 +74,15 @@ public abstract class BaseDomainObject implements Serializable {
 	public void setPersistent(boolean value) {
 		this.persistent = value;
 	}
+
+	public String getVersionHash() {
+		return versionHash;
+	}
+
+	public void setVersionHash(String versionHash) {
+		this.versionHash = versionHash;
+	}
+	
+	
 	
 }

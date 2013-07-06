@@ -11,15 +11,15 @@ import javax.sql.DataSource;
 
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 
+import com.frs.alto.cache.CachingDaoSupport;
 import com.frs.alto.domain.BaseDomainObject;
 import com.frs.alto.id.IdentifierGenerator;
 
-public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDao<T>, RowMapper<T> {
+public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingDaoSupport<T> implements SqlDao<T>, RowMapper<T> {
 	
 	private JdbcTemplate jdbcTemplate = null;
 	private IdentifierGenerator identifierGenerator = null;
@@ -38,6 +38,12 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDa
 		if (id == null) {
 			return null;
 		}
+		
+		T result = readFromCache(id);
+		if (result != null) {
+			return result;
+		}
+		
 		StringBuilder sql = new StringBuilder();
 		sql.append("select * from ");
 		sql.append(getTableName());
@@ -87,6 +93,9 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDa
 
 	@Override
 	public void delete(String hashKey) {
+		
+		
+		
 		StringBuilder sql = new StringBuilder();
 		sql.append("delete from ");
 		sql.append(getTableName());
@@ -95,6 +104,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDa
 		sql.append(" = ?");
 		jdbcTemplate.update(sql.toString(), new Object[]{hashKey});
 		
+		removeFromCache(hashKey);
 	}
 
 	@Override
@@ -108,6 +118,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDa
 		
 		List<Object[]> args = new ArrayList<Object[]>();
 		for (String id : hashKeys) {
+			removeFromCache(id);
 			args.add(new Object[]{id});
 		}
 		
@@ -118,12 +129,16 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDa
 	@Override
 	public String save(T domain) {
 		
+		generateVersionHash(domain);
+		
 		if (domain.getObjectIdentifier() == null) {
 			insert(domain);
 		}
 		else {
 			update(domain);
 		}
+		
+		writeToCache(domain);
 		
 		return domain.getObjectIdentifier();
 	}
@@ -244,6 +259,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDa
 		List<T> updateQueue = new ArrayList<T>();
 		
 		for (T domain : domains) {
+			generateVersionHash(domain);
 			if (domain.getObjectIdentifier() == null) {
 				insertQueue.add(domain);
 			}
@@ -274,6 +290,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> implements SqlDa
 		Collection<String> results = new ArrayList<String>();
 		for (T domain : domains) {
 			results.add(domain.getObjectIdentifier());
+			writeToCache(domain);
 		}
 		
 		return results;
