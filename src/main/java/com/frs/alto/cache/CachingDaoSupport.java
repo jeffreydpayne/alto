@@ -138,7 +138,8 @@ public abstract class CachingDaoSupport<T extends BaseDomainObject> {
 	}
 	
 	protected String generateVersionHash(T domain) {
-		return DigestUtils.sha1Hex(UUID.randomUUID().toString());
+		domain.setVersionHash(DigestUtils.sha1Hex(UUID.randomUUID().toString()));
+		return domain.getVersionHash();
 	}
 	
 	protected void writeToCache(AltoCache cache, T domain) {

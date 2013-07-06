@@ -3,15 +3,20 @@ package com.frs.alto.sql.dao;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -19,14 +24,50 @@ import com.frs.alto.cache.CachingDaoSupport;
 import com.frs.alto.domain.BaseDomainObject;
 import com.frs.alto.id.IdentifierGenerator;
 
-public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingDaoSupport<T> implements SqlDao<T>, RowMapper<T> {
+public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingDaoSupport<T> implements InitializingBean, SqlDao<T>, RowMapper<T> {
 	
-	private JdbcTemplate jdbcTemplate = null;
-	private IdentifierGenerator identifierGenerator = null;
-	
-	
+	protected JdbcTemplate jdbcTemplate = null;
+	private IdentifierGenerator identifierGenerator = null;	
 	
 	
+	@Override
+	public void afterPropertiesSet() throws Exception {
+	
+		if (hasSeedData()) {
+			long rowCount = getRowCount();
+			if (rowCount == 0) {
+				Collection<T> seedData = generateSeedData();
+				save(seedData);
+			}
+		}
+		
+	}
+	
+	protected long getRowCount() {
+		StringBuilder sql = new StringBuilder();
+		sql.append("select count(*) ");
+		sql.append(" from ");
+		sql.append(getTableName());
+		
+		return jdbcTemplate.query(sql.toString(), new ResultSetExtractor<Long>() {
+
+			@Override
+			public Long extractData(ResultSet rs) throws SQLException, DataAccessException {
+				if (rs.next()) {
+					return rs.getLong(1);
+				}
+				else {
+					return 0l;
+				}
+				
+			}
+			
+			
+		
+		});
+	}
+	
+
 	@Override
 	public void delete(T anObject) {
 		delete(anObject.getObjectIdentifier());
@@ -51,6 +92,16 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		sql.append(getPrimaryKeyColumn());
 		sql.append(" = ?");
 		List<T> results = jdbcTemplate.query(sql.toString(), new Object[]{id}, this);
+		result = asSingleResult(results);
+			
+		writeToCache(result);
+		
+		return result;
+		
+	}
+	
+	protected T asSingleResult(List<T> results) {
+		
 		if (results.size() > 1) {
 			throw new IllegalStateException("Too many results for findById()");
 		}
@@ -60,6 +111,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		else {
 			return null;
 		}
+		
 	}
 
 	@Override
@@ -177,7 +229,25 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		
 	}
 	
-	protected abstract void populateUpdateStatement(T domain, PreparedStatement ps);
+	protected Date fromTimeStamp(Timestamp ts) {
+		if (ts != null) {
+			return new Date(ts.getTime());
+		}
+		else {
+			return null;
+		}
+	}
+	
+	protected Timestamp asTimeStamp(Date dt) {
+		if (dt != null) {
+			return new Timestamp(dt.getTime());
+		}
+		else {
+			return null;
+		}
+	}
+	
+	protected abstract void populateUpdateStatement(T domain, PreparedStatement ps) throws SQLException;
 	
 	
 	protected String generateInsertStatement(T domain) {
@@ -195,6 +265,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		for (int i = 0; i < columns.length; i++) {
 			sql.append(",?");
 		}
+		sql.append(")");
 		return sql.toString();
 		
 	}
@@ -294,6 +365,16 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		}
 		
 		return results;
+	}
+	
+	protected boolean hasSeedData() {
+		return false;
+	}
+	
+	
+	protected Collection<T> generateSeedData() {
+		
+		return null;
 	}
 
 	@Override
