@@ -59,7 +59,11 @@ public abstract class CachingDaoSupport<T extends BaseDomainObject> {
 	}
 	
 	protected T readFromCache(AltoCache cache, String id) {
-		return (T)cache.get(getRegionName(), id);
+		T result = (T)cache.get(getRegionName(), id);
+		if (result != null) {
+			result.setFromCache(true);
+		}
+		return result;
 	}
 	
 	protected T readFromVersionCache(final String id) {
@@ -96,7 +100,6 @@ public abstract class CachingDaoSupport<T extends BaseDomainObject> {
         catch (Exception e) {
         	throw new RuntimeException(e);
         }
-        
         return result;
         
 	}
@@ -178,20 +181,8 @@ public abstract class CachingDaoSupport<T extends BaseDomainObject> {
 				break;
 			case LOCAL_WITH_REMOTE_VERSION:
 				writeToCache(localCache, domain);
-				if (domain.getVersionHash() != null) {
-					if (!threadedCacheWrites) {
-						executor.execute(new Runnable() {
-							
-							@Override
-							public void run() {
-								remoteCache.put(getRegionName(), domain.getObjectIdentifier(), domain.getVersionHash());					
-							}
-						});
-					}
-					else {
-						remoteCache.put(getRegionName(), domain.getObjectIdentifier(), domain.getVersionHash());
-					}
-				}
+				remoteCache.put(getRegionName(), domain.getObjectIdentifier(), domain.getVersionHash());
+				break;
 		}	
 		
 	}

@@ -14,6 +14,7 @@ public abstract class BaseDomainObject implements Serializable {
 	
 	private String objectIdentifier = null;
 	private String versionHash = null;
+	transient private boolean fromCache = false;
 	
 	private boolean persistent = false;
 	
@@ -81,6 +82,14 @@ public abstract class BaseDomainObject implements Serializable {
 
 	public void setVersionHash(String versionHash) {
 		this.versionHash = versionHash;
+	}
+
+	public boolean isFromCache() {
+		return fromCache;
+	}
+
+	public void setFromCache(boolean fromCache) {
+		this.fromCache = fromCache;
 	}
 	
 	

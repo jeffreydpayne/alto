@@ -67,6 +67,29 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		});
 	}
 	
+	protected void afterRead(T domain) {
+		
+	}
+	
+	protected void afterRead(Collection<T> domains) {
+		
+	}
+	
+	protected void afterInsert(T domain) {
+		afterUpdateOrWrite(domain);
+	}
+	
+	protected void afterUpdate(T domain) {
+		afterUpdateOrWrite(domain);
+	}
+	
+	protected void afterUpdateOrWrite(T domain) {
+		
+	}
+	protected void beforeDelete(String id) {
+		
+	}
+	
 
 	@Override
 	public void delete(T anObject) {
@@ -93,7 +116,12 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		sql.append(" = ?");
 		List<T> results = jdbcTemplate.query(sql.toString(), new Object[]{id}, this);
 		result = asSingleResult(results);
-			
+					
+		if (result == null) {
+			return null;
+		}
+		
+		afterRead(result);
 		writeToCache(result);
 		
 		return result;
@@ -147,7 +175,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 	public void delete(String hashKey) {
 		
 		
-		
+		beforeDelete(hashKey);
 		StringBuilder sql = new StringBuilder();
 		sql.append("delete from ");
 		sql.append(getTableName());
@@ -227,6 +255,8 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 			}
 		});
 		
+		afterInsert(domain);
+		
 	}
 	
 	protected Date fromTimeStamp(Timestamp ts) {
@@ -298,6 +328,8 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 				populateUpdateStatement(domain, ps);
 			}
 		});
+		
+		afterUpdate(domain);
 	}
 	
 	protected String generateUpdateStatement(T domain) {
