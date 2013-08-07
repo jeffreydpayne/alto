@@ -259,6 +259,38 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		
 	}
 	
+	protected int asInteger(Number number) {
+		
+		if (number != null) {
+			return number.intValue();
+		}
+		else {
+			return 0;
+		}
+		
+	}
+	
+	protected <T extends Enum> T asEnum(String code, Class<T> clazz) {
+		
+		if (code != null) {
+			return (T)Enum.valueOf(clazz, code);
+		}	
+		else {
+			return null;
+		}
+		
+	}
+	
+	
+	protected String asEnumCode(Enum e) {
+		if (e != null) {
+			return e.name();
+		}
+		else {
+			return null;
+		}
+	}
+	
 	protected Date fromTimeStamp(Timestamp ts) {
 		if (ts != null) {
 			return new Date(ts.getTime());
