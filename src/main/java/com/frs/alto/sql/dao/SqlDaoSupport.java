@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
@@ -26,21 +28,33 @@ import com.frs.alto.id.IdentifierGenerator;
 
 public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingDaoSupport<T> implements InitializingBean, SqlDao<T>, RowMapper<T> {
 	
+	private Logger logger = Logger.getLogger(this.getClass().getName());
+	
 	protected JdbcTemplate jdbcTemplate = null;
 	private IdentifierGenerator identifierGenerator = null;	
+	private boolean seedDataErrorsFatal = false;
 	
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
 	
-		if (hasSeedData()) {
-			long rowCount = getRowCount();
-			if (rowCount == 0) {
-				Collection<T> seedData = generateSeedData();
-				save(seedData);
+		try {
+			if (hasSeedData()) {
+				long rowCount = getRowCount();
+				if (rowCount == 0) {
+					Collection<T> seedData = generateSeedData();
+					save(seedData);
+				}
 			}
 		}
-		
+		catch (Exception e) {
+			if (seedDataErrorsFatal) {
+				throw e;
+			}
+			else {
+				logger.log(Level.WARNING, "Exception loading seed data:", e);
+			}
+		}
 	}
 	
 	protected long getRowCount() {

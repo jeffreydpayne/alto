@@ -58,7 +58,7 @@ public abstract class NoSqlDaoSupport<T extends BaseDomainObject, R extends Seri
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		
-		if (dataSource.isAutoCreateEnabled() && !dataSource.tableExists(getDomainClass(), getObjectMapper())) {
+		if ( (dataSource != null) && dataSource.isAutoCreateEnabled() && !dataSource.tableExists(getDomainClass(), getObjectMapper())) {
 			dataSource.createTable(getDomainClass(), getObjectMapper());
 			Collection<T> results = generateSeedData();
 			if (results != null) {
