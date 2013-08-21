@@ -466,7 +466,7 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 	}
 
 	public void setDataSource(DataSource ds) {
-		jdbcTemplate = new JdbcTemplate(ds);
+		jdbcTemplate = new JdbcTemplate(ds, true);
 	}
 		
 	protected abstract String getTableName();
