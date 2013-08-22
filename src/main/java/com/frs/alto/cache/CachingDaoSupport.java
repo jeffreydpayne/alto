@@ -92,7 +92,8 @@ public abstract class CachingDaoSupport<T extends BaseDomainObject> {
         
         try {
         	String remoteVersion = future.get();
-        	if ( (remoteVersion == null) || !remoteVersion.equals(result.getVersionHash())) {
+        	
+        	if ( (result == null) || (remoteVersion == null) || !remoteVersion.equals(result.getVersionHash())) {
         		return null;
         	}
         	
@@ -172,19 +173,22 @@ public abstract class CachingDaoSupport<T extends BaseDomainObject> {
 	
 	private void doCacheWrite(final T domain) {
 		
-		switch (cacheMode) {
-			case FULL_REMOTE:
-				writeToCache(remoteCache, domain);
-				break;
-			case FULL_LOCAL:
-				writeToCache(localCache, domain);
-				break;
-			case LOCAL_WITH_REMOTE_VERSION:
-				writeToCache(localCache, domain);
-				remoteCache.put(getRegionName(), domain.getObjectIdentifier(), domain.getVersionHash());
-				break;
-		}	
+		if (domain != null) {
+
+			switch (cacheMode) {
+				case FULL_REMOTE:
+					writeToCache(remoteCache, domain);
+					break;
+				case FULL_LOCAL:
+					writeToCache(localCache, domain);
+					break;
+				case LOCAL_WITH_REMOTE_VERSION:
+					writeToCache(localCache, domain);
+					remoteCache.put(getRegionName(), domain.getObjectIdentifier(), domain.getVersionHash());
+					break;
+			}	
 		
+		}
 	}
 	
 	public boolean isThreadedCacheWrites() {

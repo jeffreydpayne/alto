@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
+import javax.management.RuntimeErrorException;
+
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.MemcachedClient;
@@ -62,7 +64,9 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 		
 		value = processValueForWrite(value);
 		key = assembleKey(region, key);
-		
+		if (value instanceof Throwable) {
+			throw new RuntimeException((Throwable)value);
+		}
 		log.debug("Caching " + key + ": " + value.toString());
 				
 		while (true) {
@@ -190,6 +194,11 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 	}
 	
 	protected Serializable processValueForWrite(Object value) {
+		
+		if (value == null) {
+			return null;
+		}
+		
 		if (value instanceof Serializable){
 			return (Serializable)value;
 		}
@@ -198,7 +207,7 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 				return "json:" + value.getClass().getName() + "\n" + mapper.writeValueAsString(value);
 			}
 			catch (Exception e) {
-				return e;
+				throw new RuntimeException(e);
 			}
 		}
 	}

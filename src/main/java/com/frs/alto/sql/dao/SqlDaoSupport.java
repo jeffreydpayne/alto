@@ -323,6 +323,36 @@ public abstract class SqlDaoSupport<T extends BaseDomainObject> extends CachingD
 		}
 	}
 	
+	protected double asDouble(Number value) {
+		if (value != null) {
+			return value.doubleValue();
+		}
+		else {
+			return 0d;
+		}
+	}
+	
+	protected float asFloat(Number value) {
+		if (value != null) {
+			return value.floatValue();
+		}
+		else {
+			return 0f;
+		}
+	}
+	
+	protected long asLong(Number value) {
+		
+		if (value != null) {
+		
+			return value.longValue();
+			
+		}
+		else {
+			return 0;
+		}
+	}
+		
 	protected abstract void populateUpdateStatement(T domain, PreparedStatement ps) throws SQLException;
 	
 	
