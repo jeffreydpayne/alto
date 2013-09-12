@@ -27,6 +27,8 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 		
 	private static Log log = LogFactory.getLog(MemcachedAltoCache.class);
 	
+	public final static String NULL_VALUE = "_NULL_";  //we must cache nullness, for it is good
+	
 	private String serverHost = "localhost";
 	private int portNumber = 11211;
 	private int expiration = 60*60*24*30;
@@ -62,12 +64,20 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 	@Override
 	public void put(String region, String key, Object value) {
 		
+		
+		
 		value = processValueForWrite(value);
 		key = assembleKey(region, key);
 		if (value instanceof Throwable) {
 			throw new RuntimeException((Throwable)value);
 		}
-		log.debug("Caching " + key + ": " + value.toString());
+		
+		if (value == null) {
+			value = NULL_VALUE;
+		}
+		
+		log.debug("Caching " + key + ": " + ( value != null ? value.toString() : "null"));
+		
 				
 		while (true) {
 			CASValue<Object> cas = client.gets(key);
@@ -173,6 +183,10 @@ public class MemcachedAltoCache extends AsynchronousCacheSupport implements Alto
 		}
 		
 		log.debug("Hit: " + readValue.toString());
+		
+		if (NULL_VALUE.equals(readValue)) {
+			return null;
+		}
 		
 		if ( (readValue instanceof String) && readValue.toString().startsWith("json:")) {
 			String[] tokens = StringUtils.split(readValue.toString(), "\n");
