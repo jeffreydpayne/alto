@@ -25,7 +25,7 @@ public class MultiTenantJdbcDataSourceTest {
 		DataSource ds = new MultiTenantDataSource();
 		
 		TenantMetaData tenant1 = createTestTenant("tenant1");
-		TenantMetaData tenant2 = createTestTenant("tenant3");
+		TenantMetaData tenant2 = createTestTenant("tenant2");
 		TenantMetaData tenant3 = createTestTenant("tenant3");
 		
 		createTestTable(ds, tenant1);
