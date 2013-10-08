@@ -3,72 +3,96 @@ package com.frs.alto.jdbc;
 import com.frs.alto.core.DatabaseConnectionMetaData;
 import com.frs.alto.core.TenantMetaData;
 import com.frs.alto.util.TenantUtils;
-import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MultiTenantDataSource implements DataSource {
 
+    private static final String MYSQL_DRIVER = "com.mysql.jdbc.Driver";
+    private static final String MYSQL_URL_TEMPLATE = "jdbc:mysql://%s:3306";
+
+    private String datasourceId = "default";
     private PrintWriter logWriter = new PrintWriter(System.out);
-    private List<DataSource> dataSources = new ArrayList<DataSource>();
-    private HashMap<String, DataSource> tenantMapping = new HashMap<String,DataSource>();
+    private List<DataSourceInfo> dataSources = new ArrayList<DataSourceInfo>();
+    private HashMap<String, DataSourceInfo> tenantMapping = new HashMap<String, DataSourceInfo>();
+
+    /**
+     * Initialize the driver. Once.
+     */
+    static {
+        try {
+            Class.forName(MYSQL_DRIVER);
+        } catch (ClassNotFoundException cnfErr) {
+            cnfErr.printStackTrace();
+        }
+    }
+
+    /**
+     * Constructor giving an identifying name to this DataSource.
+     *
+     * @param datasourceId This DataSource's ID
+     */
+    public MultiTenantDataSource(String datasourceId) {
+
+        this.datasourceId = datasourceId;
+    }
 
     /**
      * Constructor.
-     * @param jdbcURL   A valid JDBC URL
-     * @param username  A user with privileges to read and modify tenant schemas
-     * @param password  The user's password
+     *
+     * @param datasourceId The name of this datasource
+     * @param jdbcURL      A valid JDBC URL
+     * @param username     A user with privileges to read and modify tenant schemas
+     * @param password     The user's password
      * @throws SQLException
      */
-    public MultiTenantDataSource(String jdbcURL, String username, String password) throws SQLException {
+    public MultiTenantDataSource(String datasourceId, String jdbcURL, String username, String password) throws SQLException {
 
+        this.datasourceId = datasourceId;
         addDataSource(jdbcURL, username, password);
     }
 
     /**
-     * This method adds a DataSource to the set of DataSources managed.
+     * This method adds a DataSourceInfo to the set of DataSources managed.
      *
-     * @param jdbcURL   A valid JDBC URL
-     * @param username  A user with privileges to read and modify tenant schemas
-     * @param password  The user's password
+     * @param jdbcURL  A valid JDBC URL
+     * @param username A user with privileges to read and modify tenant schemas
+     * @param password The user's password
      * @return
      * @throws SQLException
      */
-    public DataSource addDataSource(String jdbcURL, String username, String password) throws SQLException {
+    public DataSourceInfo addDataSource(String jdbcURL, String username, String password) throws SQLException {
 
-        MysqlDataSource ds = new MysqlDataSource();
-        ds.setURL(jdbcURL);
-        ds.setUser(username);
-        ds.setPassword(password);
-        ds.setLogWriter(logWriter);
-        getCatalogs(ds);
-        dataSources.add(ds);
-        return (ds);
+        DataSourceInfo cnxInfo = new DataSourceInfo(jdbcURL, username, password);
+        getCatalogs(cnxInfo);
+        dataSources.add(cnxInfo);
+        return (cnxInfo);
     }
 
     /**
      * This private method examines a DataSource for tenant schemas. They are then
      * mapped such that the correct DataSource can be found for a given tenant ID.
      *
-     * @param dataSource    The DataSource containing tenant schemas.
+     * @param dataSource The DataSourceInfo containing tenant schemas.
      * @throws SQLException
      */
-    private void getCatalogs(DataSource dataSource) throws SQLException {
+    private void getCatalogs(DataSourceInfo dataSource) throws SQLException {
 
         Connection cnx = null;
         ResultSet catalogRS = null;
 
         try {
-
             cnx = dataSource.getConnection();
-            if ( cnx == null ) {
+            if (cnx == null) {
                 throw new SQLException("Could not obtain a connection from DataSource.");
             }
             catalogRS = cnx.getMetaData().getCatalogs();
@@ -99,7 +123,7 @@ public class MultiTenantDataSource implements DataSource {
      * the current Tenant. The tenant having been previously set via
      * <code>TenantUtils.setThreadTenant()</code>.
      *
-     * @return              A JDBC Connection object.
+     * @return A JDBC Connection object.
      * @throws SQLException If no tenant was set, no mapped DataSource was found
      *                      or no DataSource could be created from the tenant's DB
      *                      metadata.
@@ -108,25 +132,35 @@ public class MultiTenantDataSource implements DataSource {
     public Connection getConnection() throws SQLException {
 
         TenantMetaData tenantMeta = TenantUtils.getThreadTenant();
-        if ( tenantMeta == null ) {
+        if (tenantMeta == null) {
             throw new SQLException("No TenantMetaData found for thread.");
         }
 
         String tenantID = tenantMeta.getTenantIdentifier();
 
-        if ( tenantMapping.containsKey(tenantID) ) {
-            DataSource ds = tenantMapping.get(tenantID);
-            Connection cnx = ds.getConnection();
+        if (tenantMapping.containsKey(tenantID)) {
+            DataSourceInfo dataSource = tenantMapping.get(tenantID);
+            Connection cnx = dataSource.getConnection();
             cnx.setCatalog(tenantID);
-            return ( cnx );
+            return (cnx);
         }
 
-        DatabaseConnectionMetaData dbMeta = tenantMeta.getDefaultDatabaseMetaData();
-        String jdbcURL = "jdbc:mysql://" + dbMeta.getServerName() + ":3306";
-        DataSource ds = addDataSource(jdbcURL, dbMeta.getUserName(), dbMeta.getPassword());
-        Connection cnx = ds.getConnection();
-        cnx.setCatalog(tenantID);
-        return ( cnx );
+        Map<String, DatabaseConnectionMetaData> dbMeta = tenantMeta.getDatabaseConnectionMetaData();
+        if (dbMeta.containsKey(datasourceId)) {
+            DatabaseConnectionMetaData meta = dbMeta.get(datasourceId);
+            String server = meta.getServerName();
+            String username = meta.getUserName();
+            String password = meta.getPassword();
+            String jdbcURL = String.format(MYSQL_URL_TEMPLATE, server);
+            addDataSource(jdbcURL, username, password);
+            DataSourceInfo schemaInfo = addDataSource(jdbcURL, username, password);
+            Connection cnx = schemaInfo.getConnection();
+            cnx.setCatalog(tenantID);
+            return (cnx);
+        }
+
+        throw new SQLException("Could not find or create a suitable DataSource.");
+
     }
 
     /**
@@ -147,7 +181,7 @@ public class MultiTenantDataSource implements DataSource {
     /**
      * This method gets the LogWriter (a PrintWriter) for the DataSource.
      *
-     * @return  The PrintWriter
+     * @return The PrintWriter
      * @throws SQLException
      */
     @Override
@@ -167,39 +201,29 @@ public class MultiTenantDataSource implements DataSource {
     public void setLogWriter(PrintWriter out) throws SQLException {
 
         logWriter = out;
-        for ( DataSource dataSource : dataSources ) {
-            dataSource.setLogWriter(out);
-        }
     }
 
     /**
      * This method sets the login timeout for all managed DataSources.
      *
-     * @param seconds       The number of seconds to wait for a login.
+     * @param seconds The number of seconds to wait for a login.
      * @throws SQLException
      */
     @Override
     public void setLoginTimeout(int seconds) throws SQLException {
 
-        for ( DataSource dataSource : dataSources ) {
-            dataSource.setLoginTimeout(seconds);
-        }
     }
 
     /**
      * Returns the login timeout of the managed DataSources.
      *
-     * @return  The login timout, in seconds, of the managed DataSources.
+     * @return The login timout, in seconds, of the managed DataSources.
      * @throws SQLException
      */
     @Override
     public int getLoginTimeout() throws SQLException {
 
-       if ( dataSources.size() == 0 ) {
-           return 0;
-       }
-
-       return ( dataSources.get(0).getLoginTimeout() );
+        return (0);
     }
 
     /**
@@ -223,8 +247,8 @@ public class MultiTenantDataSource implements DataSource {
      * This class is not a wrapper for a single DataSource, so this
      * will always return false.
      *
-     * @param iface     The interface.
-     * @return          false.
+     * @param iface The interface.
+     * @return false.
      * @throws SQLException
      */
     @Override
@@ -233,4 +257,40 @@ public class MultiTenantDataSource implements DataSource {
         return (false);
     }
 
+    /**
+     * This private class is used to store JDBC connection information and
+     * return a JDBC connection when needed.
+     */
+    private class DataSourceInfo {
+
+        private String jdbcURL;
+        private String username;
+        private String password;
+
+        /**
+         * Constructor.
+         *
+         * @param jdbcURL  JDBC URL for the database
+         * @param username A valid user with RW-CAD privileges
+         * @param password The user's password
+         */
+        public DataSourceInfo(String jdbcURL, String username, String password) {
+
+            this.jdbcURL = jdbcURL;
+            this.username = username;
+            this.password = password;
+        }
+
+        /**
+         * Returns a JDBC connection for the configured database.
+         *
+         * @return JDBC Connection.
+         * @throws SQLException
+         */
+        public Connection getConnection() throws SQLException {
+
+            return (DriverManager.getConnection(jdbcURL, username, password));
+        }
+
+    }
 }
