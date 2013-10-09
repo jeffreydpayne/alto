@@ -7,7 +7,6 @@ import com.frs.alto.util.TenantUtils;
 import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -17,24 +16,10 @@ import java.util.Map;
 
 public class MultiTenantDataSource implements DataSource {
 
-    private static final String MYSQL_DRIVER = "com.mysql.jdbc.Driver";
-    private static final String MYSQL_URL_TEMPLATE = "jdbc:mysql://%s:3306";
-
     private String datasourceId = "default";
     private PrintWriter logWriter = new PrintWriter(System.out);
     private List<DataSourceInfo> dataSources = new ArrayList<DataSourceInfo>();
     private HashMap<String, DataSourceInfo> tenantMapping = new HashMap<String, DataSourceInfo>();
-
-    /**
-     * Initialize the driver. Once.
-     */
-    static {
-        try {
-            Class.forName(MYSQL_DRIVER);
-        } catch (ClassNotFoundException cnfErr) {
-            cnfErr.printStackTrace();
-        }
-    }
 
     /**
      * Constructor giving an identifying name to this DataSource.
@@ -50,29 +35,29 @@ public class MultiTenantDataSource implements DataSource {
      * Constructor.
      *
      * @param datasourceId The name of this datasource
-     * @param jdbcURL      A valid JDBC URL
+     * @param hostname     The host name of the database server
      * @param username     A user with privileges to read and modify tenant schemas
      * @param password     The user's password
      * @throws SQLException
      */
-    public MultiTenantDataSource(String datasourceId, String jdbcURL, String username, String password) throws SQLException {
+    public MultiTenantDataSource(String datasourceId, String hostname, String username, String password) throws SQLException {
 
         this.datasourceId = datasourceId;
-        addDataSource(jdbcURL, username, password);
+        addDataSource(hostname, username, password);
     }
 
     /**
      * This method adds a DataSourceInfo to the set of DataSources managed.
      *
-     * @param jdbcURL  A valid JDBC URL
+     * @param hostname The host name of the database server
      * @param username A user with privileges to read and modify tenant schemas
      * @param password The user's password
      * @return
      * @throws SQLException
      */
-    public DataSourceInfo addDataSource(String jdbcURL, String username, String password) throws SQLException {
+    public DataSourceInfo addDataSource(String hostname, String username, String password) throws SQLException {
 
-        DataSourceInfo cnxInfo = new DataSourceInfo(jdbcURL, username, password);
+        DataSourceInfo cnxInfo = new DataSourceInfo(hostname, username, password);
         getCatalogs(cnxInfo);
         dataSources.add(cnxInfo);
         return (cnxInfo);
@@ -91,6 +76,7 @@ public class MultiTenantDataSource implements DataSource {
         ResultSet catalogRS = null;
 
         try {
+
             cnx = dataSource.getConnection();
             if (cnx == null) {
                 throw new SQLException("Could not obtain a connection from DataSource.");
@@ -101,10 +87,9 @@ public class MultiTenantDataSource implements DataSource {
                 tenantMapping.put(tenantID, dataSource);
 
             }
-        } catch (SQLException sqlErr) {
+        } catch (Exception sqlErr) {
 
             throw new SQLException("Error fetching catalogs.", sqlErr);
-
         } finally {
 
             try {
@@ -151,9 +136,7 @@ public class MultiTenantDataSource implements DataSource {
             String server = meta.getServerName();
             String username = meta.getUserName();
             String password = meta.getPassword();
-            String jdbcURL = String.format(MYSQL_URL_TEMPLATE, server);
-            addDataSource(jdbcURL, username, password);
-            DataSourceInfo schemaInfo = addDataSource(jdbcURL, username, password);
+            DataSourceInfo schemaInfo = addDataSource(server, username, password);
             Connection cnx = schemaInfo.getConnection();
             cnx.setCatalog(tenantID);
             return (cnx);
@@ -266,6 +249,7 @@ public class MultiTenantDataSource implements DataSource {
         private String jdbcURL;
         private String username;
         private String password;
+        private ConnectionPool pool;
 
         /**
          * Constructor.
@@ -279,6 +263,7 @@ public class MultiTenantDataSource implements DataSource {
             this.jdbcURL = jdbcURL;
             this.username = username;
             this.password = password;
+            this.pool = new ConnectionPool(jdbcURL, username, password);
         }
 
         /**
@@ -289,7 +274,11 @@ public class MultiTenantDataSource implements DataSource {
          */
         public Connection getConnection() throws SQLException {
 
-            return (DriverManager.getConnection(jdbcURL, username, password));
+            try {
+                return ( pool.checkOut() );
+            } catch (Exception coErr) {
+                throw new SQLException("Failure checking out connection.", coErr);
+            }
         }
 
     }
