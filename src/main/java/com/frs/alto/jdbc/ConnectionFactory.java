@@ -3,38 +3,28 @@ package com.frs.alto.jdbc;
 import org.apache.commons.pool.PoolableObjectFactory;
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
+import java.util.Enumeration;
 
 public class ConnectionFactory implements PoolableObjectFactory {
 
-    private static final String MYSQL_DRIVER = "com.mysql.jdbc.Driver";
-    private static final String MYSQL_URL_TEMPLATE = "jdbc:mysql://%s:3306";
-
+    private Databases dbProfile = null;
     private String hostname = null;
     private String username = null;
     private String password = null;
 
     /**
-     * Initialize the driver. Once.
-     */
-    static {
-        try {
-            Class.forName(MYSQL_DRIVER);
-        } catch (ClassNotFoundException cnfErr) {
-            cnfErr.printStackTrace();
-        }
-    }
-
-    /**
-     * Constructore. Provide a database host name, user name and password. The host name
+     * Constructor. Provide a database host name, user name and password. The host name
      * should be just that, and not a JDBC URL.
      *
      * @param hostname      The DNS name or address of the database server
      * @param username      A valid user for this database
      * @param password      The user's password.
      */
-    public ConnectionFactory(String hostname, String username, String password)  {
+    public ConnectionFactory(Databases dbProfile, String hostname, String username, String password)  {
 
+        this.dbProfile = dbProfile;
         this.hostname = hostname;
         this.username = username;
         this.password = password;
@@ -64,16 +54,35 @@ public class ConnectionFactory implements PoolableObjectFactory {
 
     /**
      * This method is called by the pool to create an object. In this case,
-     * a <code>java.sql.Connection</code>.
+     * a <code>java.sql.Connection</code>. We also check DriverManager to
+     * see if the driver for the current database profile has been registered.
      *
      * @return
      * @throws Exception
      */
     public Object makeObject() throws Exception {
-        return DriverManager.getConnection(
-                String.format(MYSQL_URL_TEMPLATE, hostname),
-                username,
-                password);
+
+        String jdbcURL = String.format(dbProfile.getUrlPattern(), hostname, dbProfile.getDefaultPort());
+        boolean isDriverRegistered = false;
+
+        Enumeration<Driver> drivers = DriverManager.getDrivers();
+        while ( drivers.hasMoreElements() ) {
+            Driver driver = drivers.nextElement();
+            if ( driver.getClass().getName().equals(dbProfile.getDriverClass()) ) {
+                isDriverRegistered = true;
+                break;
+            }
+        }
+
+        if ( !isDriverRegistered ) {
+            try {
+                Class.forName(dbProfile.getDriverClass());
+            } catch (ClassNotFoundException cnfErr) {
+                cnfErr.printStackTrace();
+            }
+        }
+
+        return DriverManager.getConnection(jdbcURL, username, password);
     }
 
     /**

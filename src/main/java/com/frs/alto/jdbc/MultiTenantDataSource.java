@@ -16,6 +16,10 @@ import java.util.Map;
 
 public class MultiTenantDataSource implements DataSource {
 
+    private int maxActive = 5;
+    private int maxIdle = 1;
+    private long maxWait = 10000;
+
     private String datasourceId = "default";
     private PrintWriter logWriter = new PrintWriter(System.out);
     private List<DataSourceInfo> dataSources = new ArrayList<DataSourceInfo>();
@@ -32,18 +36,86 @@ public class MultiTenantDataSource implements DataSource {
     }
 
     /**
-     * Constructor.
+     * Gets the ID of this datasource.
      *
-     * @param datasourceId The name of this datasource
-     * @param hostname     The host name of the database server
-     * @param username     A user with privileges to read and modify tenant schemas
-     * @param password     The user's password
-     * @throws SQLException
+     * @return  The datasource ID.
      */
-    public MultiTenantDataSource(String datasourceId, String hostname, String username, String password) throws SQLException {
+    public String getDataSourceId() {
+        return ( datasourceId );
+    }
 
+    /**
+     * Sets the ID of this datasource.
+     *
+     * @param datasourceId The value for this DataSource's ID.
+     */
+    public void setDataSourceId(String datasourceId) {
         this.datasourceId = datasourceId;
-        addDataSource(hostname, username, password);
+    }
+
+    /**
+     * This method gets the maximum number of active pooled Connections to be
+     * in allowed.
+     *
+     * @return  The maximum active connections in the pool.
+     */
+    public int getMaxActive() {
+
+        return maxActive;
+    }
+
+    /**
+     * This method sets the maximum number of active pooled Connections to be
+     * in allowed.
+     *
+     */
+    public void setMaxActive(int maxActive) {
+
+        this.maxActive = maxActive;
+    }
+
+    /**
+     * This method returns the maximum number of idle Connections that will
+     * be allowed in the pool.
+     *
+     * @return  The maximum number of idle connections.
+     */
+    public int getMaxIdle() {
+
+        return maxIdle;
+    }
+
+    /**
+     * This method sets a limit on the maximum number of idle Connections
+     * allowed to remain in the pool.
+     *
+     * @param maxIdle   The maximum idle connections allowed.
+     */
+    public void setMaxIdle(int maxIdle) {
+
+        this.maxIdle = maxIdle;
+    }
+
+    /**
+     * This method gets the maximum time the Connection Factory will wait for
+     * a login to complete.
+     *
+     * @return  The time, in milliseconds, the Connection Factory will wait.
+     */
+    public long getMaxWait() {
+
+        return maxWait;
+    }
+
+    /**
+     * This method sets the maximum time the Connection Factory will wait for
+     * a login to complete.
+     *
+     * @param maxWait  The time, in milliseconds, the Connection Factory will wait.
+     */
+    public void setMaxWait(long maxWait) {
+
+        this.maxWait = maxWait;
     }
 
     /**
@@ -55,9 +127,10 @@ public class MultiTenantDataSource implements DataSource {
      * @return
      * @throws SQLException
      */
-    public DataSourceInfo addDataSource(String hostname, String username, String password) throws SQLException {
+    private DataSourceInfo addDataSource(Databases dbProfile, String hostname, String username, String password) throws SQLException {
 
-        DataSourceInfo cnxInfo = new DataSourceInfo(hostname, username, password);
+        DataSourceInfo cnxInfo = new DataSourceInfo(dbProfile, hostname, username, password,
+                                                    maxActive, maxIdle, maxWait);
         getCatalogs(cnxInfo);
         dataSources.add(cnxInfo);
         return (cnxInfo);
@@ -136,7 +209,8 @@ public class MultiTenantDataSource implements DataSource {
             String server = meta.getServerName();
             String username = meta.getUserName();
             String password = meta.getPassword();
-            DataSourceInfo schemaInfo = addDataSource(server, username, password);
+            Databases dbProfile = meta.getServerType();
+            DataSourceInfo schemaInfo = addDataSource(dbProfile, server, username, password);
             Connection cnx = schemaInfo.getConnection();
             cnx.setCatalog(tenantID);
             return (cnx);
@@ -246,24 +320,20 @@ public class MultiTenantDataSource implements DataSource {
      */
     private class DataSourceInfo {
 
-        private String jdbcURL;
-        private String username;
-        private String password;
         private ConnectionPool pool;
 
         /**
          * Constructor.
          *
-         * @param jdbcURL  JDBC URL for the database
-         * @param username A valid user with RW-CAD privileges
-         * @param password The user's password
+         * @param dbProfile     The Database Enum describing this database type.
+         * @param hostname      Database host name.
+         * @param username      A valid user with RW-CAD privileges
+         * @param password      The user's password
          */
-        public DataSourceInfo(String jdbcURL, String username, String password) {
+        public DataSourceInfo(Databases dbProfile, String hostname, String username, String password,
+                              int maxActive, int maxIdle, long maxWait) {
 
-            this.jdbcURL = jdbcURL;
-            this.username = username;
-            this.password = password;
-            this.pool = new ConnectionPool(jdbcURL, username, password);
+            this.pool = new ConnectionPool(dbProfile, hostname, username, password, maxActive, maxIdle, maxWait);
         }
 
         /**
@@ -279,6 +349,16 @@ public class MultiTenantDataSource implements DataSource {
             } catch (Exception coErr) {
                 throw new SQLException("Failure checking out connection.", coErr);
             }
+        }
+
+        /**
+         * Returns the connection pool associated to this data source.
+         *
+         * @return  The connection pool.
+         */
+        public ConnectionPool getPool() {
+
+            return ( pool );
         }
 
     }

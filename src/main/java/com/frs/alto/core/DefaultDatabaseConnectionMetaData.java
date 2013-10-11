@@ -1,5 +1,7 @@
 package com.frs.alto.core;
 
+import com.frs.alto.jdbc.Databases;
+
 public class DefaultDatabaseConnectionMetaData implements
 		DatabaseConnectionMetaData {
 	
@@ -9,13 +11,14 @@ public class DefaultDatabaseConnectionMetaData implements
 	private String schemaName;
 	private String userName;
 	private String password;
+    private Databases serverType;
 
 	@Override
 	public String getConnectionId() {
 		return connectionId;
 	}
 
-	@Override
+    @Override
 	public String getServerName() {
 		return serverName;
 	}
@@ -40,6 +43,11 @@ public class DefaultDatabaseConnectionMetaData implements
 		return password;
 	}
 
+    @Override
+    public Databases getServerType() {
+        return serverType;
+    }
+
 	public void setConnectionId(String connectionId) {
 		this.connectionId = connectionId;
 	}
@@ -63,7 +71,10 @@ public class DefaultDatabaseConnectionMetaData implements
 	public void setPassword(String password) {
 		this.password = password;
 	}
-	
-	
+
+    public void setServerType(Databases serverType) {
+        this.serverType = serverType;
+    }
+
 
 }

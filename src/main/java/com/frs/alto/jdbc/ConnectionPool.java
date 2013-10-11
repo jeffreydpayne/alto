@@ -9,20 +9,20 @@ import java.sql.Connection;
  */
 public class ConnectionPool extends GenericObjectPool {
 
-    private int maxActive = 5;
-    private int maxIdle = 1;
-    private long maxWait = 5000;
-
     /**
      * Constructor.
      * @param hostname  The host name of the database server. Not the JDBC URL.
      * @param username  The username with which to create connections.
      * @param password  The user's password.
+     * @param maxActive The maximum number of active connections in the pool.
+     * @param maxIdle   The maximum number of in-active connections in the pool.
+     * @param maxWait   The maximum time, in millis, to wait for a login.
      */
-    public ConnectionPool(String hostname, String username, String password) {
+    public ConnectionPool(Databases dbProfile, String hostname, String username, String password,
+                          int maxActive, int maxIdle, long maxWait) {
 
         super();
-        setFactory(new ConnectionFactory(hostname, username, password));
+        setFactory(new ConnectionFactory(dbProfile, hostname, username, password));
         setMaxActive(maxActive);
         setMaxIdle(maxIdle);
         setMaxWait(maxWait);

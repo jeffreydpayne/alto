@@ -61,6 +61,7 @@ public class MultiTenantJdbcDataSourceTest {
 		db.setSchemaName(tenantId);
 		db.setServerId("localhost");
 		db.setServerName("localhost");
+        db.setServerType(Databases.MYSQL);
 		tenant.addDatabaseMetaData(db);
 		return tenant;
 	}
