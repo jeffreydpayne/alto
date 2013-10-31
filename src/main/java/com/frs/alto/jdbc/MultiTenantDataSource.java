@@ -9,10 +9,12 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class MultiTenantDataSource implements DataSource {
 
@@ -313,8 +315,22 @@ public class MultiTenantDataSource implements DataSource {
 
         return (false);
     }
+    
+    
+    
+    
 
-    /**
+    @Override
+	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+
+
+	/**
      * This private class is used to store JDBC connection information and
      * return a JDBC connection when needed.
      */

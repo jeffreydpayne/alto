@@ -3,6 +3,7 @@ package com.frs.alto.jdbc;
 import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 
 /**
  * This class is a simple wrapper for <code>java.sql.Connection</code> in which
@@ -303,4 +304,38 @@ public class PooledConnection implements Connection {
 
         return ( connection.isWrapperFor(aClass) );
     }
+
+	public void setSchema(String schema) throws SQLException {
+		
+		connection.setSchema(schema);
+		
+	}
+
+	public String getSchema() throws SQLException {
+		return ( connection.getSchema() );
+	}
+
+	public void abort(Executor executor) throws SQLException {
+		
+		connection.abort(executor);
+		
+	}
+
+	@Override
+	public void setNetworkTimeout(Executor executor, int milliseconds)
+			throws SQLException {
+		
+		connection.setNetworkTimeout(executor, milliseconds);
+		
+	}
+
+	@Override
+	public int getNetworkTimeout() throws SQLException {
+		
+		return ( connection.getNetworkTimeout() );
+		
+	}
+    
+    
+    
 }
