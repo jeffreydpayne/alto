@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.flex</groupId>
   <artifactId>alto</artifactId>
-  <version>0.3-SNAPSHOT</version>
+  <version>0.3</version>
   <packaging>jar</packaging>
   <name>Alto J2EE Cloud Utilities</name>
   <properties>
@@ -15,6 +15,7 @@
     <connection>scm:git:https://github.com/alto-project/alto.git</connection>
     <developerConnection>scm:git:https://github.com/alto-project/alto.git</developerConnection>
     <url>http://github.com/alto-project/alto</url>
+    <tag>alto-0.3</tag>
   </scm>
   <distributionManagement>
     <repository>
