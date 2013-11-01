@@ -1,10 +1,5 @@
 package com.frs.alto.jdbc;
 
-import com.frs.alto.core.DatabaseConnectionMetaData;
-import com.frs.alto.core.TenantMetaData;
-import com.frs.alto.util.TenantUtils;
-
-import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -15,6 +10,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import javax.sql.DataSource;
+
+import com.frs.alto.core.DatabaseConnectionMetaData;
+import com.frs.alto.core.TenantMetaData;
+import com.frs.alto.util.TenantUtils;
 
 public class MultiTenantDataSource implements DataSource {
 
@@ -320,7 +321,6 @@ public class MultiTenantDataSource implements DataSource {
     
     
 
-    @Override
 	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
 		// TODO Auto-generated method stub
 		return null;
