@@ -143,6 +143,10 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	
 	protected long doCachePersist(final Collection<ClientType> clientTypes, final ClusterSecurityContext context) {
 		
+		if (altoCache == null) {
+			return context.getLastUpdateTimestamp();
+		}
+		
 		log.info("Pushing session to cache: " + context.getClusterSessionId());
 		context.setPersistent(true);
 		altoCache.put(region, context.getClusterSessionId(), context);
@@ -277,9 +281,15 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 
 	@Override
 	public ClusterSecurityContext loadById(String clusterSessionId) {
-		ClusterSecurityContext context = (ClusterSecurityContext)altoCache.get(region, clusterSessionId);
 		
-		return context;
+		if (altoCache != null) {
+			ClusterSecurityContext context = (ClusterSecurityContext)altoCache.get(region, clusterSessionId);
+			
+			return context;
+		}
+		else {
+			return null;
+		}
 	}
 	@Override
 	public void expire(HttpServletRequest request, String clusterSessionId) {
@@ -332,7 +342,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	@Override
 	public Collection<String> getClusterSessionIdsForPrinciple(Principal principal) {
 		
-		if (principal != null) {
+		if ( (altoCache != null) && (principal != null) ) {
 			String key = userPrefix + "#" + principal.getName();
 			
 			String rawValue = (String)altoCache.get(region, key);
@@ -347,7 +357,7 @@ public class CacheBasedSecurityContextRepository implements ClusterSecurityConte
 	@Override
 	public Collection<String> getClusterSessionIdsForPrinciple(Principal principal, ClientType clientType) {
 		
-		if (principal != null) {
+		if ( (altoCache != null) && (principal != null) ) {
 		
 			String key = userPrefix + "#" + clientType.name() + "#" + principal.getName();
 			
