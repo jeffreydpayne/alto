@@ -19,8 +19,10 @@ public interface BaseDao<T extends BaseDomainObject> {
 	
 	public String save(T anObject);
 	public void delete(T anObject);
+	public void delete(String id);
 	public T findById(String id);
 	public Collection<String> findAllIds();
 	public Collection<T> findAll();
+	public Class<T> getDomainClass();
 			
 }
