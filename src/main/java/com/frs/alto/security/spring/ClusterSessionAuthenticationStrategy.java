@@ -1,4 +1,4 @@
-package com.frs.alto.security;
+package com.frs.alto.security.spring;
 
 import java.util.ArrayList;
 import java.util.Collection;
