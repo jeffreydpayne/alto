@@ -21,17 +21,10 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
-import com.frs.kennewick.util.Permission;
-import com.mf.roundhouse.core.domain.MobileDevice;
-import com.mf.roundhouse.core.domain.UserProfile;
-import com.mf.roundhouse.core.service.MobileDeviceService;
-import com.mf.roundhouse.core.service.UserProfileService;
-import com.mf.roundhouse.core.system.RoundhouseSystemBean;
-import com.mf.roundhouse.core.system.SessionCollaborator;
-import com.mf.roundhouse.core.util.NetworkUtils;
+
 import java.nio.charset.Charset;
 
-public class SecurityInterceptor extends HandlerInterceptorAdapter {
+public class ClusterSecurityInterceptor extends HandlerInterceptorAdapter {
 	
 	public final static String AUTH_HEADER_PREFIX = "FRS";
 	
@@ -40,15 +33,16 @@ public class SecurityInterceptor extends HandlerInterceptorAdapter {
 	private long dateWindow = 15 * 60 * 1000; //15 minutes
 	
 	private static final Charset CHAR_SET = Charset.forName("UTF-8");
+	
+	private ClusterSecurityController securityController;
   
 
 	
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+	
+		SessionMetaData session = securityController.acquireSession(request, response);
 		
-		SessionCollaborator collab = getSessionCollaborator(request, handler);
-		
-		processStringLocale(request, response, collab);
 		
 		boolean authorized = false;
 		
