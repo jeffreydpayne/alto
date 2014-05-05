@@ -89,7 +89,7 @@ public class ClusterSecurityController {
 		response.addHeader(requestTokenHeaderName, session.getRequestForgeryToken());
 		
 		Cookie cookie = new Cookie(sessionCookieName, session.getSessionId());
-		cookie.setMaxAge(sessionTimeout);
+		cookie.setMaxAge(sessionTimeout * 60);
 		response.addCookie(cookie);
 		
 		return session;
@@ -118,7 +118,7 @@ public class ClusterSecurityController {
 	 */
 	public void visitRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		
-		request.setAttribute("requestId", idGenerator.generateRawIdentifier(request));
+		request.setAttribute("requestId", idGenerator.generateStringIdentifier(request));
 		
 		String sessionId = null;
 		
@@ -151,6 +151,7 @@ public class ClusterSecurityController {
 			}
 		}
 		
+		request.setAttribute("session", session);
 		
 		if (requestForgeryTokenEnabled && !request.getMethod().equals("GET")) {
 			String headerToken = request.getHeader(requestTokenHeaderName);
@@ -163,22 +164,43 @@ public class ClusterSecurityController {
 		
 		session.setLastRequestDate(new Date());
 		sessionRepository.save(session);
-		request.setAttribute("session", session);
+		
 	}
 	
-	public ClusterPrincipal authenticate(String userName, String password, String secondaryToken) {
+	public SessionMetaData authenticate(HttpServletRequest request, HttpServletResponse response, String userName, String password, String secondaryToken) throws Exception {
+		
+		SessionMetaData session = acquireSession(request, response);
 		
 		ClusterPrincipal principal = primaryAuthenticator.authenticate(userName, password);
 		
+		
+		
 		if (principal == null) {
-			return null;
+			session.failedLoginAttempt();
+			sessionRepository.save(session);
+			return session;
 		}
 		
 		if (secondaryAuthenticator != null) {
-			return secondaryAuthenticator.authenticate(userName, secondaryToken);
+			principal = secondaryAuthenticator.authenticate(userName, secondaryToken);
+		}
+		
+		
+		if (principal != null) {
+			//we change session on login
+			killSession(request, response);
+			session = createSession(request, response);
+			session.setPrincipalId(principal.getPrincipalId());
+			session.setAuthenticated(true);
+			session.setPrincipal(principal);
+			sessionRepository.save(session);
+			return session;
 		}
 		else {
-			return principal;
+			
+			session.failedLoginAttempt();
+			sessionRepository.save(session);
+			return session;
 		}
 		
 	}

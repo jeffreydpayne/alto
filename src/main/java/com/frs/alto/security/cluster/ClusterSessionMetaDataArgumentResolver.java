@@ -7,6 +7,7 @@ import org.springframework.web.context.request.ServletWebRequest;
 
 public class ClusterSessionMetaDataArgumentResolver implements WebArgumentResolver {
 	
+	private ClusterSecurityController securityController;
 
 	@Override
 	public Object resolveArgument(MethodParameter methodParameter, NativeWebRequest webRequest) throws Exception {
@@ -18,6 +19,14 @@ public class ClusterSessionMetaDataArgumentResolver implements WebArgumentResolv
 		}
 		
 		return UNRESOLVED;
+	}
+
+	public ClusterSecurityController getSecurityController() {
+		return securityController;
+	}
+
+	public void setSecurityController(ClusterSecurityController securityController) {
+		this.securityController = securityController;
 	}
 	
 	

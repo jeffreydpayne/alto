@@ -66,6 +66,18 @@ public class ClusterSecurityInterceptor extends HandlerInterceptorAdapter {
 	}
 
 
+
+	public ClusterSecurityController getSecurityController() {
+		return securityController;
+	}
+
+
+
+	public void setSecurityController(ClusterSecurityController securityController) {
+		this.securityController = securityController;
+	}
+
+
 	/*
 	
 	protected SessionCollaborator checkHeaders(HttpServletRequest request, Object handler) {

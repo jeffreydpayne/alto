@@ -3,7 +3,9 @@ package com.frs.alto.dao.riak;
 import java.util.Collection;
 import java.util.Iterator;
 
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.basho.riak.client.IRiakClient;
 import com.basho.riak.client.bucket.Bucket;
@@ -24,16 +26,34 @@ public abstract class RiakDaoSupport<T extends BaseDomainObject> extends BaseCac
 	
 	private String bucketName = null;
 	
+	@Value("${alto.riak.bucket.namespace}") 
+	private String bucketNamespace = null;
+	
+	@Value("${alto.riak.bucket.per.tenant:false}") 
+	private boolean bucketPerTenant = false;
+	
 	private ObjectMapper jsonMapper = new ObjectMapper();
 	
 	
 	protected String getBucketName() {
 		
+		StringBuilder sb = new StringBuilder();
+		sb.append(bucketNamespace);
+		sb.append(".");
+		
+		if (bucketPerTenant) {
+			sb.append(TenantUtils.getThreadTenantIdentifier());
+			sb.append(".");
+		}
+		
 		if (bucketName == null) {
 			bucketName = getDomainClass().getName();
 		}
 		
-		return TenantUtils.getThreadTenantIdentifier() + "-" + bucketName;
+		sb.append(bucketName);
+		
+		return sb.toString();
+		
 		
 	}
 	
@@ -93,7 +113,12 @@ public abstract class RiakDaoSupport<T extends BaseDomainObject> extends BaseCac
 	public T findById(String id) {
 		try {
 			Bucket bucket = getBucket();
-			return bucket.fetch(id, getDomainClass()).execute();
+			if (StringUtils.isNotEmpty(id)) {
+				return bucket.fetch(id, getDomainClass()).execute();
+			}
+			else {
+				return null;
+			}
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -126,6 +151,26 @@ public abstract class RiakDaoSupport<T extends BaseDomainObject> extends BaseCac
 	@Override
 	public Collection<T> findAll() {
 		throw new UnsupportedOperationException("Not supported in Riak");
+	}
+
+	public IdentifierGenerator getIdGenerator() {
+		return idGenerator;
+	}
+
+	public void setIdGenerator(IdentifierGenerator idGenerator) {
+		this.idGenerator = idGenerator;
+	}
+
+	public String getBucketNamespace() {
+		return bucketNamespace;
+	}
+
+	public void setBucketNamespace(String bucketNamespace) {
+		this.bucketNamespace = bucketNamespace;
+	}
+
+	public void setBucketName(String bucketName) {
+		this.bucketName = bucketName;
 	}
 	
 	

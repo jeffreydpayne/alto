@@ -16,6 +16,7 @@ public class SessionMetaData extends BaseDomainObject {
 	private String principalId;
 	private boolean authenticated = false;
 	private String requestForgeryToken = null;
+	private int loginAttempts = 0;
 	
 	@JsonIgnore
 	private ClusterPrincipal principal;
@@ -108,6 +109,15 @@ public class SessionMetaData extends BaseDomainObject {
 		this.loggingId = loggingId;
 	}
 	
+	
+	public int getLoginAttempts() {
+		return loginAttempts;
+	}
+
+	public void setLoginAttempts(int loginAttempts) {
+		this.loginAttempts = loginAttempts;
+	}
+
 	public boolean hasPermission(String permCode) {
 		if (principal == null) {
 			return false;
@@ -118,6 +128,13 @@ public class SessionMetaData extends BaseDomainObject {
 		else {
 			return principal.getGrantedPermissionCodes().contains(permCode);
 		}
+	}
+	
+	public void failedLoginAttempt() {
+		loginAttempts++;
+		principal = null;
+		principalId = null;
+		
 	}
 	
 
