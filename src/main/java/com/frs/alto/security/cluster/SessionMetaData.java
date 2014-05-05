@@ -12,7 +12,7 @@ public class SessionMetaData extends BaseDomainObject {
 	private Date lastRequestDate;
 	private boolean dead = true;
 	private Date killDate = null;
-	
+	private String loggingId;
 	private String principalId;
 	private boolean authenticated = false;
 	private String requestForgeryToken = null;
@@ -98,6 +98,26 @@ public class SessionMetaData extends BaseDomainObject {
 
 	public void setLastRequestDate(Date lastRequestDate) {
 		this.lastRequestDate = lastRequestDate;
+	}
+
+	public String getLoggingId() {
+		return loggingId;
+	}
+
+	public void setLoggingId(String loggingId) {
+		this.loggingId = loggingId;
+	}
+	
+	public boolean hasPermission(String permCode) {
+		if (principal == null) {
+			return false;
+		}
+		else if (principal.getGrantedPermissionCodes() == null) {
+			return false;
+		}
+		else {
+			return principal.getGrantedPermissionCodes().contains(permCode);
+		}
 	}
 	
 

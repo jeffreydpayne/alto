@@ -1,28 +1,14 @@
 package com.frs.alto.security.cluster;
 
+import java.nio.charset.Charset;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
-
-
-import java.nio.charset.Charset;
 
 public class ClusterSecurityInterceptor extends HandlerInterceptorAdapter {
 	
@@ -53,63 +39,34 @@ public class ClusterSecurityInterceptor extends HandlerInterceptorAdapter {
 				authorized = true;
 			}
 			else {
-				if (collab == null) {
-					authorized = false;
-				}
-				else {
-					Permission perm;
-					authorized = true;
-					for (String permCode : annot.value()) {
-						perm = new Permission(permCode);
-						switch (annot.grouping()) {
-							case ALL:
-								if (!collab.isAuthorized(perm)) {
-									authorized = false;
-								}
-								break;
-							case ANY:
-								if (collab.isAuthorized(perm)) {
-									authorized = true;
-								}
-								break;
-						}
+
+				authorized = true;
+				for (String permCode : annot.value()) {
+					switch (annot.grouping()) {
+						case ALL:
+							if (!session.hasPermission(permCode)) {
+								authorized = false;
+							}
+							break;
+						case ANY:
+							if (session.hasPermission(permCode)) {
+								authorized = true;
+							}
+							break;
 					}
 				}
+				
 			}
+			method.getMethodParameters();
 			
 		}
-		
-		//populate collab
 				
 		return authorized;
 		
 	}
 
-	public RoundhouseSystemBean getSystemBean() {
-		return systemBean;
-	}
 
-	public void setSystemBean(RoundhouseSystemBean systemBean) {
-		this.systemBean = systemBean;
-	}
-	
-	
-	protected SessionCollaborator getSessionCollaborator(HttpServletRequest request, Object handler) {
-		
-		SessionCollaborator collab = checkHttpSession(request.getSession());
-		if (collab != null) {
-			return collab;
-		}
-		
-		return checkHeaders(request, handler);
-		
-		
-	}
-	
-	protected SessionCollaborator checkHttpSession(HttpSession session) {
-		return (SessionCollaborator)session.getAttribute(SessionCollaborator.SESSION_COLLABORATOR_KEY);
-		
-	}
+	/*
 	
 	protected SessionCollaborator checkHeaders(HttpServletRequest request, Object handler) {
 		
@@ -250,22 +207,9 @@ public class ClusterSecurityInterceptor extends HandlerInterceptorAdapter {
 		return theCollab;
 
 	}
+	
+	*/
 
-	public UserProfileService getUserService() {
-		return userService;
-	}
-
-	public void setUserService(UserProfileService userService) {
-		this.userService = userService;
-	}
-
-	public MobileDeviceService getDeviceService() {
-		return deviceService;
-	}
-
-	public void setDeviceService(MobileDeviceService deviceService) {
-		this.deviceService = deviceService;
-	}
 	
 	
 	

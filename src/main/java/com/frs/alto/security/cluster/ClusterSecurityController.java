@@ -4,13 +4,12 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.Logger;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.frs.alto.id.IdentifierGenerator;
+import com.frs.alto.id.LocalUUIDGenerator;
 import com.frs.alto.id.SecureRandomIdGenerator;
 
 public class ClusterSecurityController {
@@ -18,13 +17,14 @@ public class ClusterSecurityController {
 	private Logger logger = Logger.getLogger(ClusterSecurityController.class.getName());
 	
 	private int sessionTimeout = 20; //in minute
-	private boolean requestTokenHeaderEnabled = false;
+	private boolean requestForgeryTokenEnabled = false;
 	private String requestTokenHeaderName = "xsrftoken";
 	private String sessionCookieName = "_altosessionid";
 	private boolean sessionCookieHttpOnly = true;
 	private int sessionLimitPerUser = 1;
 	
 	private IdentifierGenerator idGenerator = new SecureRandomIdGenerator();
+	private IdentifierGenerator uuidGenerator = new LocalUUIDGenerator();
 	
 	private PrincipalRepository principalRepository;
 	private SessionRepository sessionRepository;
@@ -33,10 +33,10 @@ public class ClusterSecurityController {
 	private Authenticator secondaryAuthenticator = null;  //used for mfe logins
 	
 	
-	public SessionMetaData acquireSession(HttpServletRequest request, HttpServletResponse response, boolean forceNew) throws Exception {
+	public SessionMetaData acquireSession(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		
-		
-		return null;
+		return (SessionMetaData)request.getAttribute("session");
+
 	}
 	
 	protected boolean sessionExists(String sessionId) {
@@ -61,7 +61,7 @@ public class ClusterSecurityController {
 
 	public void killSession(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		
-		SessionMetaData session = acquireSession(request, response, false);
+		SessionMetaData session = acquireSession(request, response);
 		session.setDead(true);
 		session.setKillDate(new Date());
 		
@@ -83,6 +83,7 @@ public class ClusterSecurityController {
 		session.setDead(false);
 		session.setRequestForgeryToken(idGenerator.generateStringIdentifier(session));
 		session.setSessionId(generateSessionId(session));
+		session.setLoggingId(uuidGenerator.generateStringIdentifier(session));
 		sessionRepository.save(session);
 		
 		response.addHeader(requestTokenHeaderName, session.getRequestForgeryToken());
@@ -94,9 +95,13 @@ public class ClusterSecurityController {
 		return session;
 	}
 	
-	public void sendUnauthorizedResponse(HttpServletRequest request, HttpServletResponse response) throws Exception {
+	public void sendUnauthorizedResponse(HttpServletRequest request, HttpServletResponse response, String reason) throws Exception {
 		
 		response.setStatus(403);
+		
+		SessionMetaData session = acquireSession(request, response);
+		
+		logger.warning("[IP: " + request.getRemoteAddr() + " Session: " + session.getLoggingId() + "] " + reason);
 		
 		
 	}
@@ -128,10 +133,10 @@ public class ClusterSecurityController {
 		SessionMetaData session = sessionRepository.findById(sessionId);
 		if (session == null) {
 			session = createSession(request, response);
-			logger.info("Created new session: " + session.getSessionId());
+			logger.info("Created new session: " + session.getLoggingId());
 		}
 		else if (session.isDead()) {
-			logger.info("Attempt to access dead session: " + session.getSessionId());
+			logger.info("Attempt to access dead session: " + session.getLoggingId());
 			session = createSession(request, response);
 		}
 		else {
@@ -147,14 +152,18 @@ public class ClusterSecurityController {
 		}
 		
 		
-		if (requestTokenHeaderEnabled && !request.getMethod().equals("GET")) {
-			
+		if (requestForgeryTokenEnabled && !request.getMethod().equals("GET")) {
+			String headerToken = request.getHeader(requestTokenHeaderName);
+			if ( (headerToken == null) || headerToken.equals(session.getRequestForgeryToken())) {
+				sendUnauthorizedResponse(request, response, "Invalid XRF Token");
+				return;
+			}
 		}
 		
 		
 		session.setLastRequestDate(new Date());
 		sessionRepository.save(session);
-		
+		request.setAttribute("session", session);
 	}
 	
 	public ClusterPrincipal authenticate(String userName, String password, String secondaryToken) {
@@ -182,12 +191,21 @@ public class ClusterSecurityController {
 		this.sessionTimeout = sessionTimeout;
 	}
 
-	public boolean isRequestTokenHeaderEnabled() {
-		return requestTokenHeaderEnabled;
+
+	public boolean isRequestForgeryTokenEnabled() {
+		return requestForgeryTokenEnabled;
 	}
 
-	public void setRequestTokenHeaderEnabled(boolean requestTokenHeaderEnabled) {
-		this.requestTokenHeaderEnabled = requestTokenHeaderEnabled;
+	public void setRequestForgeryTokenEnabled(boolean requestForgeryTokenEnabled) {
+		this.requestForgeryTokenEnabled = requestForgeryTokenEnabled;
+	}
+
+	public IdentifierGenerator getUuidGenerator() {
+		return uuidGenerator;
+	}
+
+	public void setUuidGenerator(IdentifierGenerator uuidGenerator) {
+		this.uuidGenerator = uuidGenerator;
 	}
 
 	public String getRequestTokenHeaderName() {
