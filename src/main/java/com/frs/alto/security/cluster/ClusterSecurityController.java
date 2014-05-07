@@ -22,6 +22,8 @@ public class ClusterSecurityController {
 	private String sessionCookieName = "_altosessionid";
 	private boolean sessionCookieHttpOnly = true;
 	private int sessionLimitPerUser = 1;
+	private boolean missingAnnotationPrevention = true;
+	private String guestPermissionCode = "guest";
 	
 	private IdentifierGenerator idGenerator = new SecureRandomIdGenerator();
 	private IdentifierGenerator uuidGenerator = new LocalUUIDGenerator();
@@ -35,7 +37,13 @@ public class ClusterSecurityController {
 	
 	public SessionMetaData acquireSession(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		
-		return (SessionMetaData)request.getAttribute("session");
+		SessionMetaData session = (SessionMetaData)request.getAttribute("session");
+		
+		if (session.isAuthenticated() && !session.isDead() && (session.getPrincipal() == null)) {
+			session.setPrincipal(principalRepository.lookupPrincipal(session.getPrincipalId()));
+		}
+		
+		return session;
 
 	}
 	
@@ -90,6 +98,7 @@ public class ClusterSecurityController {
 		
 		Cookie cookie = new Cookie(sessionCookieName, session.getSessionId());
 		cookie.setMaxAge(sessionTimeout * 60);
+		cookie.setPath("/");
 		response.addCookie(cookie);
 		
 		return session;
@@ -124,9 +133,11 @@ public class ClusterSecurityController {
 		
 		Cookie[] cookies = request.getCookies();
 		
-		for (Cookie cookie : cookies) {
-			if (cookie.getName().equals(sessionCookieName)) {
-				sessionId = cookie.getValue();
+		if (cookies != null) {
+			for (Cookie cookie : cookies) {
+				if (cookie.getName().equals(sessionCookieName)) {
+					sessionId = cookie.getValue();
+				}
 			}
 		}
 		
@@ -300,6 +311,22 @@ public class ClusterSecurityController {
 
 	public void setSecondaryAuthenticator(Authenticator secondaryAuthenticator) {
 		this.secondaryAuthenticator = secondaryAuthenticator;
+	}
+
+	public boolean isMissingAnnotationPrevention() {
+		return missingAnnotationPrevention;
+	}
+
+	public void setMissingAnnotationPrevention(boolean missingAnnotationPrevention) {
+		this.missingAnnotationPrevention = missingAnnotationPrevention;
+	}
+
+	public String getGuestPermissionCode() {
+		return guestPermissionCode;
+	}
+
+	public void setGuestPermissionCode(String guestPermissionCode) {
+		this.guestPermissionCode = guestPermissionCode;
 	}
 	
 	

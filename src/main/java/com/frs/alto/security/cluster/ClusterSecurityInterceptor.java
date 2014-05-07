@@ -36,7 +36,7 @@ public class ClusterSecurityInterceptor extends HandlerInterceptorAdapter {
 			HandlerMethod method = (HandlerMethod)handler;
 			Permissions annot = method.getMethodAnnotation(Permissions.class);
 			if (annot == null) {
-				authorized = true;
+				return !securityController.isMissingAnnotationPrevention();
 			}
 			else {
 
@@ -44,12 +44,12 @@ public class ClusterSecurityInterceptor extends HandlerInterceptorAdapter {
 				for (String permCode : annot.value()) {
 					switch (annot.grouping()) {
 						case ALL:
-							if (!session.hasPermission(permCode)) {
+							if (!session.hasPermission(permCode) && !permCode.equals(securityController.getGuestPermissionCode())) {
 								authorized = false;
 							}
 							break;
 						case ANY:
-							if (session.hasPermission(permCode)) {
+							if (session.hasPermission(permCode) || permCode.equals(securityController.getGuestPermissionCode())) {
 								authorized = true;
 							}
 							break;
