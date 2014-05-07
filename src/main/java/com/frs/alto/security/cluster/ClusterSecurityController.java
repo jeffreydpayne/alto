@@ -95,7 +95,7 @@ public class ClusterSecurityController {
 		return session;
 	}
 	
-	public void sendUnauthorizedResponse(HttpServletRequest request, HttpServletResponse response, String reason) throws Exception {
+	public boolean sendUnauthorizedResponse(HttpServletRequest request, HttpServletResponse response, String reason) throws Exception {
 		
 		response.setStatus(403);
 		
@@ -103,8 +103,10 @@ public class ClusterSecurityController {
 		
 		logger.warning("[IP: " + request.getRemoteAddr() + " Session: " + session.getLoggingId() + "] " + reason);
 		
+		return false;
 		
 	}
+	
 	/**
 	 * 
 	 * The purpose of this method is to ensure that a valid session exists before each request is processed.
@@ -116,7 +118,7 @@ public class ClusterSecurityController {
 	 * @param response
 	 * @throws Exception
 	 */
-	public void visitRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+	public boolean visitRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		
 		request.setAttribute("requestId", idGenerator.generateStringIdentifier(request));
 		
@@ -156,14 +158,19 @@ public class ClusterSecurityController {
 		if (requestForgeryTokenEnabled && !request.getMethod().equals("GET")) {
 			String headerToken = request.getHeader(requestTokenHeaderName);
 			if ( (headerToken == null) || headerToken.equals(session.getRequestForgeryToken())) {
-				sendUnauthorizedResponse(request, response, "Invalid XRF Token");
-				return;
+				return sendUnauthorizedResponse(request, response, "Invalid XRF Token");
 			}
 		}
 		
 		
 		session.setLastRequestDate(new Date());
 		sessionRepository.save(session);
+		
+		Cookie cookie = new Cookie(sessionCookieName, session.getSessionId());
+		cookie.setMaxAge(sessionTimeout * 60);
+		response.addCookie(cookie);
+		
+		return true;
 		
 	}
 	

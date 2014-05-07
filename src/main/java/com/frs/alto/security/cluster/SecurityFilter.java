@@ -32,10 +32,11 @@ public class SecurityFilter implements Filter {
 		
 		try {
 		
-			securityController.visitRequest((HttpServletRequest)request, (HttpServletResponse)response);
-			chain.doFilter(request, response);
-			if (securityController.isSessionCookieHttpOnly()) {
-				//set httponly flag
+			if (securityController.visitRequest((HttpServletRequest)request, (HttpServletResponse)response)) {
+				chain.doFilter(request, response);
+				if (securityController.isSessionCookieHttpOnly()) {
+					//set httponly flag
+				}
 			}
 		}
 		catch (Exception e) {
