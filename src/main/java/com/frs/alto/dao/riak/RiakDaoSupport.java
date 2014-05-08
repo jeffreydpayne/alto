@@ -1,5 +1,6 @@
 package com.frs.alto.dao.riak;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -150,7 +151,20 @@ public abstract class RiakDaoSupport<T extends BaseDomainObject> extends BaseCac
 
 	@Override
 	public Collection<T> findAll() {
-		throw new UnsupportedOperationException("Not supported in Riak");
+		Collection<T> results = new ArrayList<T>();
+		try {
+			Bucket bucket = getBucket();
+			StreamingOperation<String> keyItr = bucket.keys();
+			while (keyItr.hasNext()) {
+				results.add(findById(keyItr.next()));
+			}
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
+		return results;
+		
 	}
 
 	public IdentifierGenerator getIdGenerator() {
