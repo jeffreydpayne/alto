@@ -179,6 +179,7 @@ public class ClusterSecurityController {
 		
 		Cookie cookie = new Cookie(sessionCookieName, session.getSessionId());
 		cookie.setMaxAge(sessionTimeout * 60);
+		cookie.setPath("/");
 		response.addCookie(cookie);
 		
 		return true;
