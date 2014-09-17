@@ -1,7 +1,5 @@
 package com.frs.alto.cache.ehcache;
 
-import java.util.logging.Logger;
-
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
@@ -16,9 +14,6 @@ public class EhcacheAltoCache extends AsynchronousCacheSupport implements AltoCa
 	
 	private CacheManager cacheManager = null;
 	private boolean autoCreate = true;
-	
-	private Logger logger = Logger.getLogger(EhcacheAltoCache.class.getName());
-	
 	
 	private CacheKeyGenerator keyGenerator = new TenantCacheKeyGenerator();
 	
