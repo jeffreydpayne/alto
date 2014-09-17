@@ -1,5 +1,7 @@
 package com.frs.alto.cache.ehcache;
 
+import java.util.logging.Logger;
+
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
@@ -14,6 +16,9 @@ public class EhcacheAltoCache extends AsynchronousCacheSupport implements AltoCa
 	
 	private CacheManager cacheManager = null;
 	private boolean autoCreate = true;
+	
+	private Logger logger = Logger.getLogger(EhcacheAltoCache.class.getName());
+	
 	
 	private CacheKeyGenerator keyGenerator = new TenantCacheKeyGenerator();
 	
@@ -30,12 +35,31 @@ public class EhcacheAltoCache extends AsynchronousCacheSupport implements AltoCa
 	@Override
 	public Object get(String region, String key) {
 		key = keyGenerator.generateRegionKey(key);
-		return getRegionCache(region).get(key);
+		Element element =  getRegionCache(region).get(key);
+		
+		
+		
+		if (element != null) {
+			if (region.contains("SalesTax")) {
+				logger.info("Cache Hit (" + region + ") " + key);
+			}
+			return element.getObjectValue();
+		}
+		else {
+			if (region.contains("SalesTax")) {
+				logger.info("Cache Miss (" + region + ") " + key);
+				logger.info(getRegionCache(region).getKeys().toString());
+			}
+			return null;
+		}
 	}
 
 	@Override
 	public void put(String region, String key, Object value) {
 		key = keyGenerator.generateRegionKey(key);
+		if (region.contains("SalesTax")) {
+			logger.info("Cache Write (" + region + ") " + key);
+		}
 		getRegionCache(region).put(new Element(key, value));		
 	}
 
