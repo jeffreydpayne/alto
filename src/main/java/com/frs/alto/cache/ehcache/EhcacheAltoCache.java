@@ -40,16 +40,9 @@ public class EhcacheAltoCache extends AsynchronousCacheSupport implements AltoCa
 		
 		
 		if (element != null) {
-			if (region.contains("SalesTax")) {
-				logger.info("Cache Hit (" + region + ") " + key);
-			}
 			return element.getObjectValue();
 		}
 		else {
-			if (region.contains("SalesTax")) {
-				logger.info("Cache Miss (" + region + ") " + key);
-				logger.info(getRegionCache(region).getKeys().toString());
-			}
 			return null;
 		}
 	}
@@ -57,9 +50,6 @@ public class EhcacheAltoCache extends AsynchronousCacheSupport implements AltoCa
 	@Override
 	public void put(String region, String key, Object value) {
 		key = keyGenerator.generateRegionKey(key);
-		if (region.contains("SalesTax")) {
-			logger.info("Cache Write (" + region + ") " + key);
-		}
 		getRegionCache(region).put(new Element(key, value));		
 	}
 
