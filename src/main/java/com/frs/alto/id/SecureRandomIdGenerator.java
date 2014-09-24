@@ -8,7 +8,7 @@ public class SecureRandomIdGenerator implements IdentifierGenerator {
 	
 	private Base32 encoder = new Base32();
 	private SecureRandom random = new SecureRandom();
-	private int length = 64;
+	private int length = 32;
 
 
 	@Override
