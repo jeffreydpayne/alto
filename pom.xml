@@ -158,6 +158,12 @@
       <version>1.4.4</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+		<groupId>org.apache.velocity</groupId>
+		<artifactId>velocity</artifactId>
+		<version>1.7</version>
+		<scope>provided</scope>
+	</dependency>
 	<dependency>
 		<groupId>c3p0</groupId>
 		<artifactId>c3p0</artifactId>
