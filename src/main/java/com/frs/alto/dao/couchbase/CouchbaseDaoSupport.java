@@ -43,6 +43,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	private boolean multiTenant = true;
 	
 	private boolean enumerable = false;
+	
+	private String keyNamespace = null;
 
 	
 	private ObjectMapper jsonMapper = new ObjectMapper();
@@ -264,7 +266,15 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 
 
-	protected abstract String getKeyNamespace();
+	protected String getKeyNamespace() {
+		
+		if (keyNamespace == null) {
+			keyNamespace = getDomainClass().getSimpleName();
+		}
+		return keyNamespace;
+		
+		
+	}
 	
 
 }
