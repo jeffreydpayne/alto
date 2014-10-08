@@ -13,7 +13,7 @@ import com.frs.alto.core.TenantMetaData;
 import com.frs.alto.core.TenantResolver;
 import com.frs.alto.util.TenantUtils;
 
-public abstract class VirtualHostResolvingListener implements Filter {
+public abstract class AbstractMultiTenantFilter implements Filter {
 
 	
 	private TenantResolver resolver = null;
@@ -23,10 +23,9 @@ public abstract class VirtualHostResolvingListener implements Filter {
 	public void doFilter(ServletRequest request, ServletResponse response,
 			FilterChain chain) throws IOException, ServletException {
 		
-		HttpServletRequest httpRequest = (HttpServletRequest)request;
-		String hostName = httpRequest.getServerName();
+
 		
-		TenantMetaData metaData = resolver.resolve(hostName);
+		TenantMetaData metaData = resolver.resolve(request);
 		TenantUtils.setThreadHost(metaData);
 				
 		chain.doFilter(request, response);

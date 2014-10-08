@@ -5,8 +5,8 @@ import javax.servlet.ServletException;
 
 import com.frs.alto.core.TenantResolver;
 
-public class DefaultVirtualHostResolvingListener extends
-		VirtualHostResolvingListener {
+public class DefaultMultiTenantFilter extends
+		AbstractMultiTenantFilter {
 	
 	public final static String RESOLVER_CLASS_INIT_PROPERTY_NAME = "resolverClassName";
 

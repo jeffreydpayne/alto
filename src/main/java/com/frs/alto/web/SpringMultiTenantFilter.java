@@ -8,8 +8,8 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.frs.alto.core.TenantResolver;
 
-public class SpringVirtualHostResolvingListener extends
-		VirtualHostResolvingListener {
+public class SpringMultiTenantFilter extends
+		AbstractMultiTenantFilter {
 	
 	public final static String RESOLVER_BEAN_INIT_PROPERTY_NAME = "resolverBeanBame";
 

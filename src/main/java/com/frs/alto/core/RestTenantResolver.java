@@ -1,5 +1,7 @@
 package com.frs.alto.core;
 
+import javax.servlet.ServletRequest;
+
 
 public class RestTenantResolver implements TenantResolver {
 
@@ -9,7 +11,7 @@ public class RestTenantResolver implements TenantResolver {
 	
 	
 	@Override
-	public TenantMetaData resolve(String hostName) {
+	public TenantMetaData resolve(ServletRequest request) {
 		// TODO Auto-generated method stub
 		return null;
 	}
