@@ -73,7 +73,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			if (json == null) {
 				return null;
 			}
-			return jsonMapper.readValue(json, getDomainClass());
+			T result =  jsonMapper.readValue(json, getDomainClass());
+			afterRead(result);
+			return result;
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -110,7 +112,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			if (anObject.getObjectIdentifier() == null) {
 				anObject.setObjectIdentifier(getIdGenerator().generateStringIdentifier(anObject));
 			}
-			
+			beforeWrite(anObject);
 			client.set(toStorageKey(anObject), toJSON(anObject));
 			
 			return anObject.getObjectIdentifier();
@@ -133,6 +135,15 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 		client.delete(toStorageKey(id));
 
+		
+	}
+	
+	protected void beforeWrite(T domain) throws Exception {
+		
+	}
+	
+	protected void afterRead(T domain) throws Exception {
+		
 		
 	}
 
