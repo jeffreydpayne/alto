@@ -14,6 +14,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.couchbase.client.CouchbaseClient;
+import com.couchbase.client.protocol.views.ComplexKey;
 import com.couchbase.client.protocol.views.DesignDocument;
 import com.couchbase.client.protocol.views.InvalidViewException;
 import com.couchbase.client.protocol.views.Query;
@@ -29,6 +30,8 @@ import com.frs.alto.id.LocalUUIDGenerator;
 import com.frs.alto.util.TenantUtils;
 
 public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends BaseCachingDaoImpl<T> implements InitializingBean {
+	
+	public final static String END_TOKEN = "\\u02ad";
 	
 
 	private Logger logger = Logger.getLogger(CouchbaseDaoSupport.class.getName());
@@ -159,7 +162,10 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		View view = client.getView(getDesignDocumentName(), getViewName());
 
 		Query query = new Query();
-		query.setIncludeDocs(true);
+		query.setIncludeDocs(false);
+		if (multiTenant) {
+			query.setKey(TenantUtils.getThreadTenantIdentifier());
+		}
 		ViewResponse response = client.query(view, query);
 		 
 		Collection<String> results = new ArrayList<String>();
@@ -187,6 +193,10 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 		Query query = new Query();
 		query.setIncludeDocs(true); // Include the full document body
+		if (multiTenant) {
+			query.setRangeStart(ComplexKey.of(TenantUtils.getThreadTenantIdentifier()));
+			query.setRangeEnd(ComplexKey.of(TenantUtils.getThreadTenantIdentifier(), END_TOKEN));
+		}
 		 
 		ViewResponse response = client.query(view, query);
 		 
@@ -200,9 +210,6 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 		
 	}
-
-	
-	
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
