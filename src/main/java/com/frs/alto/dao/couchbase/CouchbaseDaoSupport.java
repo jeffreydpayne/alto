@@ -3,7 +3,13 @@ package com.frs.alto.dao.couchbase;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Logger;
+
+import net.spy.memcached.CASResponse;
+import net.spy.memcached.CASValue;
 
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
@@ -14,7 +20,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.couchbase.client.CouchbaseClient;
-import com.couchbase.client.protocol.views.ComplexKey;
 import com.couchbase.client.protocol.views.DesignDocument;
 import com.couchbase.client.protocol.views.InvalidViewException;
 import com.couchbase.client.protocol.views.Query;
@@ -22,6 +27,7 @@ import com.couchbase.client.protocol.views.View;
 import com.couchbase.client.protocol.views.ViewDesign;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.frs.alto.dao.BaseCachingDaoImpl;
 import com.frs.alto.domain.BaseDomainObject;
@@ -32,6 +38,8 @@ import com.frs.alto.util.TenantUtils;
 public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends BaseCachingDaoImpl<T> implements InitializingBean {
 	
 	public final static String END_TOKEN = "\\u02ad";
+	
+	public final static String KEY_LIST_ID = "KEYLIST";
 	
 
 	private Logger logger = Logger.getLogger(CouchbaseDaoSupport.class.getName());
@@ -46,6 +54,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	private boolean multiTenant = true;
 	
 	private boolean enumerable = false;
+	
+	private EnumerationScheme enumerationScheme = EnumerationScheme.VIEW;
 	
 	private String keyNamespace = null;
 
@@ -72,12 +82,30 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	}
 	
 	protected T fromJSON(String json) {
+		
 		try {
 			if (json == null) {
 				return null;
 			}
 			T result =  jsonMapper.readValue(json, getDomainClass());
+			result.setReadOnly(true);
 			afterRead(result);
+			return result;
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	protected T fromJSON(CASValue<Object> cas) {
+		try {
+			if (cas == null) {
+				return null;
+			}
+			
+			T result =  fromJSON((String)cas.getValue());
+			result.setCas(cas.getCas());
+			result.setReadOnly(false);
 			return result;
 		}
 		catch (Exception e) {
@@ -89,6 +117,61 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	protected String toStorageKey(T domain) {
 		
 		return toStorageKey(domain.getObjectIdentifier());
+		
+	}
+	
+	protected void writeKeyList(KeyList list) {
+		//pretty concurrency hostile implementation - fix this
+		
+		StringBuilder sb = new StringBuilder();
+		
+		if (isMultiTenant()) {
+			sb.append(TenantUtils.getThreadTenantIdentifier());
+			sb.append("#");
+		}
+		sb.append(KEY_LIST_ID);
+		
+		try {
+			if (list.getCas() > Long.MIN_VALUE) {
+				if ( client.cas(sb.toString(), list.getCas(), jsonMapper.writeValueAsString(list.getKeys())) == CASResponse.EXISTS) {
+					throw new IllegalStateException("Trying to save object with stale CAS value.");
+				}
+			}
+			else {
+				client.set(sb.toString(), jsonMapper.writeValueAsString(list.getKeys()));
+			}
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+			
+	}
+	
+	protected KeyList fetchKeyList() {
+		
+		//could be a pretty concurrency hostile implementation - hopefully using CAS protects us from issues
+		
+		StringBuilder sb = new StringBuilder();
+		
+		if (isMultiTenant()) {
+			sb.append(TenantUtils.getThreadTenantIdentifier());
+			sb.append("#");
+		}
+		sb.append(KEY_LIST_ID);
+		
+		CASValue<Object> cas = client.gets(sb.toString());
+		
+		if (cas == null) {
+			return new KeyList(new ArrayList<String>(), Long.MIN_VALUE);
+		}
+		
+		try {
+			return new KeyList((List<String>)jsonMapper.readValue((String)cas.getValue(), new TypeReference<List<String>>() {}), cas.getCas());
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		
 		
 	}
 	
@@ -111,12 +194,30 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	public String save(T anObject) {
 		
 		try {
+			if (anObject.isReadOnly()) {
+				throw new RuntimeException("This object is readonly.  Obtain a fresh instance before calling save.");
+			}
 
 			if (anObject.getObjectIdentifier() == null) {
 				anObject.setObjectIdentifier(getIdGenerator().generateStringIdentifier(anObject));
 			}
 			beforeWrite(anObject);
-			client.set(toStorageKey(anObject), toJSON(anObject));
+			if (anObject.getCas() > Long.MIN_VALUE) {
+				if (client.cas(toStorageKey(anObject), anObject.getCas(), toJSON(anObject)) == CASResponse.EXISTS) {
+					throw new IllegalStateException("Trying to save object with stale CAS value.");
+				}
+			}
+			else {
+				client.set(toStorageKey(anObject), toJSON(anObject));
+			}
+			
+			if (isEnumerable() && (getEnumerationScheme().equals(EnumerationScheme.KEY_LIST))) {
+				KeyList keyList = fetchKeyList();
+				if (!keyList.getKeys().contains(anObject.getObjectIdentifier())) {
+					keyList.getKeys().add(anObject.getObjectIdentifier());
+					writeKeyList(keyList);
+				}
+			}
 			
 			return anObject.getObjectIdentifier();
 		}
@@ -137,6 +238,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	public void delete(String id) {
 		
 		client.delete(toStorageKey(id));
+		
+		if (isEnumerable() && (getEnumerationScheme().equals(EnumerationScheme.KEY_LIST))) {
+			KeyList keyList = fetchKeyList();
+			keyList.getKeys().remove(id);
+			writeKeyList(keyList);
+		}
 
 		
 	}
@@ -152,19 +259,47 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 	@Override
 	public T findById(String id) {
-		String json = (String)client.get(toStorageKey(id));
+		CASValue<Object> cas = client.gets(toStorageKey(id));
 		
-		return fromJSON(json);
+		return fromJSON(cas);
 	}
 
 	@Override
 	public Collection<String> findAllIds() {
+		
+		
+		if (!isEnumerable()) {
+			throw new UnsupportedOperationException();
+		}
+		
+		switch (getEnumerationScheme()) {
+			case VIEW:
+				return findAllIdsWithView();
+			case KEY_LIST:
+				return findAllIdsWithKeyList();
+		}
+		
+		return null;
+		
+		
+	}
+	
+	protected Collection<String> findAllIdsWithKeyList() {
+		
+		return fetchKeyList().getKeys();
+		
+	}
+	
+	
+	protected Collection<String> findAllIdsWithView() {
+		
 		View view = client.getView(getDesignDocumentName(), getViewName());
 
 		Query query = new Query();
 		query.setIncludeDocs(false);
 		if (multiTenant) {
-			query.setKey(TenantUtils.getThreadTenantIdentifier());
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
 		}
 		ViewResponse response = client.query(view, query);
 		 
@@ -174,6 +309,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		}
 		
 		return results;
+		
 	}
 	
 	protected String getDesignDocumentName() {
@@ -186,28 +322,64 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		return getKeyNamespace();
 	}
 	
-	@Override
-	public Collection<T> findAll() {
+	
+	protected Collection<T> findAllWithKeyList() {
+		
+		KeyList keyList = fetchKeyList();
+		
+		Collection<T> results = new ArrayList<T>(keyList.getKeys().size());
+		List<String> translatedKeys = new ArrayList<String>();
+		for (String id : keyList.getKeys()) {
+			translatedKeys.add(toStorageKey(id));
+		}
+		for (Entry<String, Object> entry : client.getBulk(translatedKeys).entrySet()) {
+			results.add(fromJSON((String)entry.getValue()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findAllWithView() {
 		
 		View view = client.getView(getDesignDocumentName(), getViewName());
 
 		Query query = new Query();
 		query.setIncludeDocs(true); // Include the full document body
 		if (multiTenant) {
-			query.setRangeStart(ComplexKey.of(TenantUtils.getThreadTenantIdentifier()));
-			query.setRangeEnd(ComplexKey.of(TenantUtils.getThreadTenantIdentifier(), END_TOKEN));
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
 		}
 		 
 		ViewResponse response = client.query(view, query);
 		 
 		// 4: Iterate over the Data and print out the full document
-		Collection<T> results = new ArrayList<T>();
+		Collection<T> results = new ArrayList<T>((int)response.getTotalRows());
 		for (ViewRow row : response) {
 		  results.add(fromJSON((String)row.getDocument()));
 		}
 		
 		return results;
 		
+	}
+	
+	@Override
+	public Collection<T> findAll() {
+		
+		
+		if (!isEnumerable()) {
+			throw new UnsupportedOperationException();
+		}
+		
+		switch (getEnumerationScheme()) {
+			case VIEW:
+				return findAllWithView();
+			case KEY_LIST:
+				return findAllWithKeyList();
+		}
+		
+		
+		return null;
 		
 	}
 	
@@ -217,7 +389,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	}
 	
 	protected void initializeView() throws Exception {
-		if (isEnumerable()) {
+		if (isEnumerable() && (enumerationScheme.equals(EnumerationScheme.VIEW))) {
 			View view = null;
 			try {
 				view = client.getView(getDesignDocumentName(), getViewName());
@@ -284,6 +456,21 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 
 
+	public EnumerationScheme getEnumerationScheme() {
+		return enumerationScheme;
+	}
+
+
+
+
+	public void setEnumerationScheme(EnumerationScheme enumerationScheme) {
+		this.enumerationScheme = enumerationScheme;
+	}
+
+	
+
+
+
 	protected String getKeyNamespace() {
 		
 		if (keyNamespace == null) {
@@ -294,5 +481,25 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+    private static class KeyList {
+    	
+    	private final long cas;
+    	private final List<String> keys;
+    	
+    	public KeyList(List<String> keys, long cas) {
+    		this.cas = cas;
+    		this.keys = keys;
+    	}
 
+		public long getCas() {
+			return cas;
+		}
+
+		public List<String> getKeys() {
+			return keys;
+		}
+    	
+    	
+    	
+    }
 }

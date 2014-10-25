@@ -2,6 +2,8 @@ package com.frs.alto.domain;
 
 import java.io.Serializable;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 
 /**
  * @author Jeffrey Payne
@@ -14,9 +16,13 @@ public abstract class BaseDomainObject implements Serializable {
 	
 	private String objectIdentifier = null;
 	private String versionHash = null;
+	private long cas = Long.MIN_VALUE;
 	transient private boolean fromCache = false;
 	
 	private boolean persistent = false;
+	
+	
+	private boolean readOnly = false;
 	
 	public BaseDomainObject() {
 		super();
@@ -69,6 +75,7 @@ public abstract class BaseDomainObject implements Serializable {
 		}
 	}
 	
+	@JsonIgnore
 	public boolean isPersistent() {
 		return persistent;
 	}
@@ -84,12 +91,31 @@ public abstract class BaseDomainObject implements Serializable {
 		this.versionHash = versionHash;
 	}
 
+	@JsonIgnore
 	public boolean isFromCache() {
 		return fromCache;
 	}
 
 	public void setFromCache(boolean fromCache) {
 		this.fromCache = fromCache;
+	}
+
+	@JsonIgnore
+	public long getCas() {
+		return cas;
+	}
+
+	public void setCas(long cas) {
+		this.cas = cas;
+	}
+
+	@JsonIgnore
+	public boolean isReadOnly() {
+		return readOnly;
+	}
+
+	public void setReadOnly(boolean readOnly) {
+		this.readOnly = readOnly;
 	}
 	
 	
