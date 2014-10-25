@@ -122,23 +122,16 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 	protected void writeKeyList(KeyList list) {
 		//pretty concurrency hostile implementation - fix this
-		
-		StringBuilder sb = new StringBuilder();
-		
-		if (isMultiTenant()) {
-			sb.append(TenantUtils.getThreadTenantIdentifier());
-			sb.append("#");
-		}
-		sb.append(KEY_LIST_ID);
+
 		
 		try {
 			if (list.getCas() > Long.MIN_VALUE) {
-				if ( client.cas(sb.toString(), list.getCas(), jsonMapper.writeValueAsString(list.getKeys())) == CASResponse.EXISTS) {
+				if ( client.cas(getKeyListKey(), list.getCas(), jsonMapper.writeValueAsString(list.getKeys())) == CASResponse.EXISTS) {
 					throw new IllegalStateException("Trying to save object with stale CAS value.");
 				}
 			}
 			else {
-				client.set(sb.toString(), jsonMapper.writeValueAsString(list.getKeys()));
+				client.set(getKeyListKey(), jsonMapper.writeValueAsString(list.getKeys()));
 			}
 		}
 		catch (Exception e) {
@@ -150,16 +143,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	protected KeyList fetchKeyList() {
 		
 		//could be a pretty concurrency hostile implementation - hopefully using CAS protects us from issues
-		
-		StringBuilder sb = new StringBuilder();
-		
-		if (isMultiTenant()) {
-			sb.append(TenantUtils.getThreadTenantIdentifier());
-			sb.append("#");
-		}
-		sb.append(KEY_LIST_ID);
-		
-		CASValue<Object> cas = client.gets(sb.toString());
+
+		CASValue<Object> cas = client.gets(getKeyListKey());
 		
 		if (cas == null) {
 			return new KeyList(new ArrayList<String>(), Long.MIN_VALUE);
@@ -172,6 +157,23 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			throw new RuntimeException(e);
 		}
 		
+		
+	}
+	
+	
+	protected String getKeyListKey() {
+		
+		StringBuilder sb = new StringBuilder();
+		
+		if (isMultiTenant()) {
+			sb.append(TenantUtils.getThreadTenantIdentifier());
+			sb.append("#");
+		}
+		sb.append(getKeyNamespace());
+		sb.append("#");
+		sb.append(KEY_LIST_ID);	
+		
+		return sb.toString();
 		
 	}
 	
