@@ -299,7 +299,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 		Query query = new Query();
 		query.setIncludeDocs(false);
-		if (multiTenant) {
+		if (isMultiTenant()) {
 			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
 			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
 		}
@@ -348,7 +348,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 		Query query = new Query();
 		query.setIncludeDocs(true); // Include the full document body
-		if (multiTenant) {
+		if (isMultiTenant()) {
 			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
 			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
 		}
