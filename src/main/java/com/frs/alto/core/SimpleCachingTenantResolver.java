@@ -33,6 +33,29 @@ public class SimpleCachingTenantResolver implements TenantResolver {
 		return result;
 	}
 	
+	
+	
+	@Override
+	public TenantMetaData byId(String hostName) {
+		
+		TenantMetaData result = cacheLookup(hostName);
+		if (result != null) {
+			return result;
+		}
+		result = resolver.byId(hostName);
+		if (result != null) {
+			encache(hostName, result);
+		}
+		else {
+			decache(hostName);
+		}
+		
+		return result;
+		
+	}
+
+
+
 	protected TenantMetaData cacheLookup(String hostName) {
 		return hostCache.get(hostName);
 	}

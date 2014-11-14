@@ -15,6 +15,17 @@ public class RestTenantResolver implements TenantResolver {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	
+
+
+	@Override
+	public TenantMetaData byId(String tenantId) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
 
 
 	public String getApiUrl() {

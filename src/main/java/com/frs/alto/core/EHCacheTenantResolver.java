@@ -36,6 +36,18 @@ public class EHCacheTenantResolver implements TenantResolver {
 		return result;
 	}
 	
+	
+	
+	
+	@Override
+	public TenantMetaData byId(String tenantId) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+
 	protected TenantMetaData cacheLookup(String hostName) {
 		
 		Element element = cacheManager.getCache(cacheRegionName).get(hostName);
