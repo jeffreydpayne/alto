@@ -1,7 +1,11 @@
 package com.frs.alto.id;
 
+import java.util.UUID;
+
 import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.lang.StringUtils;
+
+import sun.misc.UUEncoder;
 
 
 public class Base32IdentifierGenerator implements IdentifierGenerator {
@@ -24,6 +28,9 @@ public class Base32IdentifierGenerator implements IdentifierGenerator {
 
 	@Override
 	public byte[] generateRawIdentifier(Object object) {
+		
+		
+		
 		return generateStringIdentifier(object).getBytes();
 	}
 	
