@@ -1,5 +1,7 @@
 package com.frs.alto.security.cluster.riak;
 
+import java.util.Collection;
+
 import org.springframework.stereotype.Component;
 
 import com.frs.alto.dao.riak.RiakDaoSupport;
@@ -12,6 +14,12 @@ public class RiakSessionRepository extends RiakDaoSupport<SessionMetaData> imple
 	@Override
 	public Class<SessionMetaData> getDomainClass() {
 		return SessionMetaData.class;
+	}
+
+	@Override
+	public Collection<SessionMetaData> findByIds(Collection<String> ids) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	

@@ -22,6 +22,7 @@ public interface BaseService<T extends BaseDomainObject> {
 	public void delete(String id);
 	public T findById(String id);
 	public Collection<String> findAllIds();
+	public Collection<T> findByIds(Collection<String> ids);
 	public Collection<T> findAll();
 	public Class<T> getDomainClass();
 			

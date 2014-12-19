@@ -39,5 +39,12 @@ public abstract class BaseServiceImpl<T extends BaseDomainObject, D extends Base
 	public Collection<T> findAll() {
 		return getPrimaryDao().findAll();
 	}
+
+	@Override
+	public Collection<T> findByIds(Collection<String> ids) {
+		return getPrimaryDao().findByIds(ids);
+	}
+	
+	
 	
 }

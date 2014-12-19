@@ -4,6 +4,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -18,6 +19,7 @@ import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.couchbase.client.CouchbaseClient;
 import com.couchbase.client.protocol.views.DesignDocument;
@@ -385,6 +387,31 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+	
+	
+	@Override
+	public Collection<T> findByIds(Collection<String> ids) {
+		
+		Collection<T> results = new ArrayList<T>();
+		
+		if (ids != null) {
+			Collection<String> realKeys = new ArrayList<String>();
+			for (String id : ids) {
+				realKeys.add(toStorageKey(id));
+			}
+			
+			 Map<String, Object> lookup = client.getBulk(realKeys);
+			 for (Object value : lookup.values()) {
+				 results.add(fromJSON((String)value));
+			 }
+		}
+			
+		return results;
+	}
+
+
+
+
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		initializeView();	
