@@ -60,6 +60,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	private EnumerationScheme enumerationScheme = EnumerationScheme.VIEW;
 	
 	private String keyNamespace = null;
+	
+	private boolean preserveFetchOrder = false;
 
 	
 	private ObjectMapper jsonMapper = new ObjectMapper();
@@ -401,8 +403,19 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			}
 			
 			 Map<String, Object> lookup = client.getBulk(realKeys);
-			 for (Object value : lookup.values()) {
-				 results.add(fromJSON((String)value));
+			 
+			 
+			 if (isPreserveFetchOrder()) {
+				 for (String id : ids) {
+					 if (lookup.containsKey(id)) {
+						 results.add(fromJSON((String)lookup.get(id)));
+					 }
+				 }
+			 }
+			 else {
+				 for (Object value : lookup.values()) {
+					 results.add(fromJSON((String)value));
+				 }
 			 }
 		}
 			
@@ -497,6 +510,20 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	}
 
 	
+
+
+
+	public boolean isPreserveFetchOrder() {
+		return preserveFetchOrder;
+	}
+
+
+
+
+	public void setPreserveFetchOrder(boolean preserveFetchOrder) {
+		this.preserveFetchOrder = preserveFetchOrder;
+	}
+
 
 
 
