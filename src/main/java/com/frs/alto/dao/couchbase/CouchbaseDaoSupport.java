@@ -1,6 +1,10 @@
 package com.frs.alto.dao.couchbase;
 
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
 import java.io.StringWriter;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -62,6 +66,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	private String keyNamespace = null;
 	
 	private boolean preserveFetchOrder = false;
+	
+	private PropertyDescriptor[] propertyDescriptors = null;
+	private Map<String, PropertyDescriptor> temporalRangeKeys = null;
 
 	
 	private ObjectMapper jsonMapper = new ObjectMapper();
@@ -195,11 +202,21 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		return builder.toString();
 		
 	}
+	
+	private void populateRangeKeys(T anObject) {
+		
+		
+		
+		
+	}
 
 	@Override
 	public String save(T anObject) {
 		
 		try {
+			
+			populateRangeKeys(anObject);
+			
 			if (anObject.isReadOnly()) {
 				throw new RuntimeException("This object is readonly.  Obtain a fresh instance before calling save.");
 			}
@@ -428,7 +445,18 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
+		propertyDescriptors = Introspector.getBeanInfo(getDomainClass()).getPropertyDescriptors();
+		cacheRangeKeys();
 		initializeView();	
+	}
+	
+	protected void cacheRangeKeys() throws Exception {
+		
+		for (PropertyDescriptor desc : propertyDescriptors) {
+			Method method = desc.getReadMethod();
+			
+		}
+		
 	}
 	
 	protected void initializeView() throws Exception {
@@ -446,6 +474,35 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 				client.createDesignDoc(doc);
 			}
 		}
+		
+		for (Annotation annot : this.getClass().getAnnotations()) {
+			if (annot.annotationType().equals(TemporalView.class)) {
+				initializeTemporalView((TemporalView)annot);
+			}
+			else if (annot.annotationType().equals(TemporalViewWithHashKey.class)) {
+				initializeTemporalViewWithHashKey((TemporalViewWithHashKey)annot);
+			}
+			else if (annot.annotationType().equals(HashAndRangeKeyView.class)) {
+				initializeHashAndRangeKeyView((HashAndRangeKeyView)annot);
+			}
+			
+		}
+		
+	}
+	
+	protected void initializeHashAndRangeKeyView(HashAndRangeKeyView annotation) {
+		
+		
+	}
+	
+	protected void initializeTemporalView(TemporalView annotation) {
+		
+		
+	}
+	
+	protected void initializeTemporalViewWithHashKey(TemporalViewWithHashKey annotation) {
+		
+		
 		
 	}
 
