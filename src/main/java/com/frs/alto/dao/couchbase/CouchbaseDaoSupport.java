@@ -407,8 +407,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			 
 			 if (isPreserveFetchOrder()) {
 				 for (String id : ids) {
-					 if (lookup.containsKey(id)) {
-						 results.add(fromJSON((String)lookup.get(id)));
+					 String key = toStorageKey(id);
+					 if (lookup.containsKey(key)) {
+						 results.add(fromJSON((String)lookup.get(key)));
 					 }
 				 }
 			 }
