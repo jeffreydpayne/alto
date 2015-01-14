@@ -1,21 +1,24 @@
 package com.frs.alto.dao.couchbase;
 
-import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.io.StringWriter;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
+import java.util.TimeZone;
 import java.util.logging.Logger;
 
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -23,7 +26,6 @@ import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.couchbase.client.CouchbaseClient;
 import com.couchbase.client.protocol.views.DesignDocument;
@@ -47,6 +49,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 	public final static String KEY_LIST_ID = "KEYLIST";
 	
+	private static DateFormat ISO_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+	
 
 	private Logger logger = Logger.getLogger(CouchbaseDaoSupport.class.getName());
 	
@@ -67,11 +71,17 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 	private boolean preserveFetchOrder = false;
 	
-	private PropertyDescriptor[] propertyDescriptors = null;
-	private Map<String, PropertyDescriptor> temporalRangeKeys = null;
+	private Map<String, TemporalRangeKeyMapping> temporalRangeKeys = null;
 
 	
 	private ObjectMapper jsonMapper = new ObjectMapper();
+	
+	{
+		
+		TimeZone tz = TimeZone.getTimeZone("UTC");
+		ISO_FORMAT.setTimeZone(tz);
+		
+	}
 	
 	
 	protected String getBucketName() {
@@ -208,6 +218,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 		
 		
+		
 	}
 
 	@Override
@@ -224,6 +235,18 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			if (anObject.getObjectIdentifier() == null) {
 				anObject.setObjectIdentifier(getIdGenerator().generateStringIdentifier(anObject));
 			}
+			//process temporal range keys
+			if (temporalRangeKeys != null) {
+				for (TemporalRangeKeyMapping mapping : temporalRangeKeys.values()) {
+					Date sourceValue = (Date)PropertyUtils.getProperty(anObject, mapping.getSourceProperty());
+					String targetValue = null;
+					if (sourceValue == null) {
+						targetValue = ISO_FORMAT.format(sourceValue);
+					}
+					PropertyUtils.setProperty(anObject, mapping.getTargetProperty(), targetValue);
+				}
+			}
+			
 			beforeWrite(anObject);
 			if (anObject.getCas() > Long.MIN_VALUE) {
 				if (client.cas(toStorageKey(anObject), anObject.getCas(), toJSON(anObject)) == CASResponse.EXISTS) {
@@ -445,19 +468,30 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		propertyDescriptors = Introspector.getBeanInfo(getDomainClass()).getPropertyDescriptors();
-		cacheRangeKeys();
+		cacheTemporalRangeKeys();
 		initializeView();	
 	}
 	
-	protected void cacheRangeKeys() throws Exception {
+	protected void cacheTemporalRangeKeys() throws Exception {
 		
-		for (PropertyDescriptor desc : propertyDescriptors) {
-			Method method = desc.getReadMethod();
+		
+		temporalRangeKeys = new HashMap<String, CouchbaseDaoSupport.TemporalRangeKeyMapping>();
+		
+		for (Annotation annot : this.getClass().getAnnotations()) {
+			if (annot.annotationType().equals(TemporalView.class)) {
+				TemporalView view = (TemporalView)annot;
+				temporalRangeKeys.put(view.timestampKey(), new TemporalRangeKeyMapping(view.timestampKey(), view.rangeKey()));
+			}
+			else if (annot.annotationType().equals(TemporalViewWithHashKey.class)) {
+				TemporalViewWithHashKey view = (TemporalViewWithHashKey)annot;
+				temporalRangeKeys.put(view.timestampKey(), new TemporalRangeKeyMapping(view.timestampKey(), view.rangeKey()));
+			}
+
 			
 		}
 		
 	}
+	
 	
 	protected void initializeView() throws Exception {
 		if (isEnumerable() && (enumerationScheme.equals(EnumerationScheme.VIEW))) {
@@ -469,7 +503,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			if (view == null) {
 				logger.info("Adding Couchbase View: " + getDesignDocumentName());
 				DesignDocument doc = new DesignDocument(getDesignDocumentName());
-				ViewDesign design = new ViewDesign(getViewName(), getMapFunction(), getReduceFunction());
+				ViewDesign design = new ViewDesign(getViewName(), getEnumerationMapFunction(), "");
 				doc.setView(design);
 				client.createDesignDoc(doc);
 			}
@@ -500,29 +534,56 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected void initializeTemporalViewWithHashKey(TemporalViewWithHashKey annotation) {
+	protected void initializeTemporalViewWithHashKey(TemporalViewWithHashKey annotation) throws Exception {
 		
-		
+		View view = null;
+		try {
+			view = client.getView(getViewName(annotation.name()), getViewName(annotation.name()));
+		}
+		catch (InvalidViewException e) {}
+		if (view == null) {
+			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
+			DesignDocument doc = new DesignDocument(annotation.name());
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getRangeKeyMapFunction(annotation.hashKey(), annotation.rangeKey()), "");
+			doc.setView(design);
+			client.createDesignDoc(doc);
+		}
 		
 	}
-
-	protected String getReduceFunction() throws Exception {
-		return "";
-	}
-
-	protected String getMapFunction() throws Exception {
+	
+	
+	protected String getRangeKeyMapFunction(String hashKey, String rangeKey) throws Exception {
 		
 		VelocityEngine ve = new VelocityEngine();
 		ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath"); 
 		ve.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
         ve.init();
-        Template t = ve.getTemplate( "com/frs/alto/dao/couchbase/map-template.js" );
+        Template t = ve.getTemplate( "com/frs/alto/dao/couchbase/range-key-map-template.js" );
+        VelocityContext context = new VelocityContext();
+        context.put("keyNameSpace", getKeyNamespace());
+        context.put("hashKey", hashKey);
+        context.put("rangeKey", rangeKey);
+        StringWriter writer = new StringWriter();
+        t.merge( context, writer );
+		return writer.toString();
+	}
+
+	protected String getEnumerationMapFunction() throws Exception {
+		
+		VelocityEngine ve = new VelocityEngine();
+		ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath"); 
+		ve.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+        ve.init();
+        Template t = ve.getTemplate( "com/frs/alto/dao/couchbase/enumeration-map-template.js" );
         VelocityContext context = new VelocityContext();
         context.put("keyNameSpace", getKeyNamespace());
         StringWriter writer = new StringWriter();
         t.merge( context, writer );
 		return writer.toString();
 	}
+	
+	
+	
 
 	public IdentifierGenerator getIdGenerator() {
 		return idGenerator;
@@ -583,7 +644,11 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	}
 
 
-
+	protected String getViewName(String viewName) {
+		
+		return getKeyNamespace() + "." + viewName;
+		
+	}
 
 	protected String getKeyNamespace() {
 		
@@ -614,6 +679,28 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		}
     	
     	
+    	
+    }
+    
+    
+    private static class TemporalRangeKeyMapping {
+    	
+    	private String sourceProperty;
+    	private String targetProperty;
+    	
+    	public TemporalRangeKeyMapping(String source, String target) {
+    		sourceProperty = source;
+    		targetProperty = target;
+    	}
+    	
+    	public String getSourceProperty() {
+    		return sourceProperty;
+    	}
+    	
+    	public String getTargetProperty() {
+    		return targetProperty;
+    	}
+
     	
     }
 }
