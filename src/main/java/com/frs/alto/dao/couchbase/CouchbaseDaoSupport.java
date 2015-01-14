@@ -90,7 +90,102 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+	protected Collection<T> findBetween(String viewName, Date startDate, Date endDate) {
+		
+		return null;
+	}
 	
+	protected Collection<T> findBefore(String viewName, Date queryDate) {
+		
+		return null;
+		
+	}
+	
+	protected Collection<T> findAfter(String viewName, Date queryDate) {
+		
+		return null;
+		
+	}
+	
+
+	
+	protected Collection<T> findBetween(String viewName, String hashKey, Date startDate, Date endDate) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + ISO_FORMAT.format(startDate));
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + ISO_FORMAT.format(endDate) +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(hashKey + "#" + ISO_FORMAT.format(startDate));
+			query.setRangeEnd(hashKey + "#" + ISO_FORMAT.format(endDate) +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findBefore(String viewName, String hashKey, Date queryDate) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + ISO_FORMAT.format(queryDate) +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(hashKey);
+			query.setRangeEnd(hashKey + "#" + ISO_FORMAT.format(queryDate) +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findAfter(String viewName, String hashKey, Date queryDate) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + ISO_FORMAT.format(queryDate));
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + END_TOKEN);
+		}
+		else {
+			query.setRangeStart(hashKey + "#" + ISO_FORMAT.format(queryDate));
+			query.setRangeEnd(hashKey +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
 	
 
 	protected String toJSON(T domain)  {
@@ -240,7 +335,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 				for (TemporalRangeKeyMapping mapping : temporalRangeKeys.values()) {
 					Date sourceValue = (Date)PropertyUtils.getProperty(anObject, mapping.getSourceProperty());
 					String targetValue = null;
-					if (sourceValue == null) {
+					if (sourceValue != null) {
 						targetValue = ISO_FORMAT.format(sourceValue);
 					}
 					PropertyUtils.setProperty(anObject, mapping.getTargetProperty(), targetValue);
@@ -543,10 +638,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		catch (InvalidViewException e) {}
 		if (view == null) {
 			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
-			DesignDocument doc = new DesignDocument(annotation.name());
+			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
 			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getRangeKeyMapFunction(annotation.hashKey(), annotation.rangeKey()), "");
 			doc.setView(design);
-			client.createDesignDoc(doc);
+			if (!client.createDesignDoc(doc)) {
+				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
+			}
 		}
 		
 	}
