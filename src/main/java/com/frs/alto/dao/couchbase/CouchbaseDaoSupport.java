@@ -1,6 +1,5 @@
 package com.frs.alto.dao.couchbase;
 
-import java.beans.PropertyDescriptor;
 import java.io.StringWriter;
 import java.lang.annotation.Annotation;
 import java.text.DateFormat;
@@ -90,18 +89,18 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected Collection<T> findBetween(String viewName, Date startDate, Date endDate) {
+	protected Collection<T> findBetweenWithView(String viewName, Date startDate, Date endDate) {
 		
 		return null;
 	}
 	
-	protected Collection<T> findBefore(String viewName, Date queryDate) {
+	protected Collection<T> findBeforeWithView(String viewName, Date queryDate) {
 		
 		return null;
 		
 	}
 	
-	protected Collection<T> findAfter(String viewName, Date queryDate) {
+	protected Collection<T> findAfterWithView(String viewName, Date queryDate) {
 		
 		return null;
 		
@@ -109,7 +108,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 
 	
-	protected Collection<T> findBetween(String viewName, String hashKey, Date startDate, Date endDate) {
+	protected Collection<T> findBetweenWithView(String viewName, String hashKey, Date startDate, Date endDate) {
 		
 		View view = client.getView(getViewName(viewName), getViewName(viewName));
 		
@@ -135,7 +134,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected Collection<T> findBefore(String viewName, String hashKey, Date queryDate) {
+	protected Collection<T> findBeforeWithView(String viewName, String hashKey, Date queryDate) {
 		
 		View view = client.getView(getViewName(viewName), getViewName(viewName));
 		
@@ -161,7 +160,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected Collection<T> findAfter(String viewName, String hashKey, Date queryDate) {
+	protected Collection<T> findAfterWithView(String viewName, String hashKey, Date queryDate) {
 		
 		View view = client.getView(getViewName(viewName), getViewName(viewName));
 		
