@@ -607,6 +607,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			if (annot.annotationType().equals(TemporalView.class)) {
 				initializeTemporalView((TemporalView)annot);
 			}
+			else if (annot.annotationType().equals(RangeKeyView.class)) {
+				initializeRangeKeyView((RangeKeyView)annot);
+			}
 			else if (annot.annotationType().equals(TemporalViewWithHashKey.class)) {
 				initializeTemporalViewWithHashKey((TemporalViewWithHashKey)annot);
 			}
@@ -618,12 +621,62 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected void initializeHashAndRangeKeyView(HashAndRangeKeyView annotation) {
+	protected void initializeHashAndRangeKeyView(HashAndRangeKeyView annotation) throws Exception {
+		
+		View view = null;
+		try {
+			view = client.getView(getViewName(annotation.name()), getViewName(annotation.name()));
+		}
+		catch (InvalidViewException e) {}
+		if (view == null) {
+			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
+			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getHashAndRangeKeyMapFunction(annotation.hashKey(), annotation.rangeKey()), "");
+			doc.setView(design);
+			if (!client.createDesignDoc(doc)) {
+				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
+			}
+		}
 		
 		
 	}
 	
-	protected void initializeTemporalView(TemporalView annotation) {
+	protected void initializeRangeKeyView(RangeKeyView annotation) throws Exception {
+		
+		View view = null;
+		try {
+			view = client.getView(getViewName(annotation.name()), getViewName(annotation.name()));
+		}
+		catch (InvalidViewException e) {}
+		if (view == null) {
+			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
+			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getRangeKeyMapFunction(annotation.rangeKey()), "");
+			doc.setView(design);
+			if (!client.createDesignDoc(doc)) {
+				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
+			}
+		}
+		
+		
+	}
+	
+	protected void initializeTemporalView(TemporalView annotation) throws Exception {
+		
+		View view = null;
+		try {
+			view = client.getView(getViewName(annotation.name()), getViewName(annotation.name()));
+		}
+		catch (InvalidViewException e) {}
+		if (view == null) {
+			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
+			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getRangeKeyMapFunction(annotation.rangeKey()), "");
+			doc.setView(design);
+			if (!client.createDesignDoc(doc)) {
+				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
+			}
+		}
 		
 		
 	}
@@ -638,7 +691,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		if (view == null) {
 			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
 			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
-			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getRangeKeyMapFunction(annotation.hashKey(), annotation.rangeKey()), "");
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getHashAndRangeKeyMapFunction(annotation.hashKey(), annotation.rangeKey()), "");
 			doc.setView(design);
 			if (!client.createDesignDoc(doc)) {
 				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
@@ -648,13 +701,28 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	}
 	
 	
-	protected String getRangeKeyMapFunction(String hashKey, String rangeKey) throws Exception {
+	protected String getRangeKeyMapFunction(String rangeKey) throws Exception {
 		
 		VelocityEngine ve = new VelocityEngine();
 		ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath"); 
 		ve.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
         ve.init();
         Template t = ve.getTemplate( "com/frs/alto/dao/couchbase/range-key-map-template.js" );
+        VelocityContext context = new VelocityContext();
+        context.put("keyNameSpace", getKeyNamespace());
+        context.put("rangeKey", rangeKey);
+        StringWriter writer = new StringWriter();
+        t.merge( context, writer );
+		return writer.toString();
+	}
+	
+	protected String getHashAndRangeKeyMapFunction(String hashKey, String rangeKey) throws Exception {
+		
+		VelocityEngine ve = new VelocityEngine();
+		ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath"); 
+		ve.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+        ve.init();
+        Template t = ve.getTemplate( "com/frs/alto/dao/couchbase/hash-and-range-key-map-template.js" );
         VelocityContext context = new VelocityContext();
         context.put("keyNameSpace", getKeyNamespace());
         context.put("hashKey", hashKey);
