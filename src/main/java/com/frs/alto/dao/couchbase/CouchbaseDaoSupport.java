@@ -56,6 +56,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	@Autowired
 	private CouchbaseClient client;
 	
+	private Integer ttl = null;
+	
 	private IdentifierGenerator idGenerator = new LocalUUIDGenerator();
 	
 	private String bucketName = null;
@@ -89,20 +91,241 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected Collection<T> findBetweenWithView(String viewName, Date startDate, Date endDate) {
+	protected Collection<T> findBetweenWithView(String viewName, String startRange, String endRange) {
+
 		
-		return null;
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + startRange);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + endRange +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(startRange);
+			query.setRangeEnd(endRange +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findBeforeWithView(String viewName, String queryRange) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + queryRange +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart("");
+			query.setRangeEnd(queryRange +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findAfterWithView(String viewName, String queryRange) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + queryRange);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + END_TOKEN);
+		}
+		else {
+			query.setRangeStart(queryRange);
+			query.setRangeEnd(END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+
+	
+	protected Collection<T> findBetweenWithView(String viewName, String hashKey, String startRange, String endRange) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + startRange);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + endRange +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(hashKey + "#" + startRange);
+			query.setRangeEnd(hashKey + "#" + endRange +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findBeforeWithView(String viewName, String hashKey, String queryRange) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + queryRange +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(hashKey);
+			query.setRangeEnd(hashKey + "#" + queryRange +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findAfterWithView(String viewName, String hashKey, String queryRange) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + queryRange);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + hashKey + "#" + END_TOKEN);
+		}
+		else {
+			query.setRangeStart(hashKey + "#" + queryRange);
+			query.setRangeEnd(hashKey +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findBetweenWithView(String viewName, Date startDate, Date endDate) {
+
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + ISO_FORMAT.format(startDate));
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + ISO_FORMAT.format(endDate) +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(ISO_FORMAT.format(startDate));
+			query.setRangeEnd(ISO_FORMAT.format(endDate) +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
 	}
 	
 	protected Collection<T> findBeforeWithView(String viewName, Date queryDate) {
 		
-		return null;
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + ISO_FORMAT.format(queryDate) +  "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart("");
+			query.setRangeEnd(ISO_FORMAT.format(queryDate) +  "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
 		
 	}
 	
 	protected Collection<T> findAfterWithView(String viewName, Date queryDate) {
 		
-		return null;
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+		
+		Collection<T> results = new ArrayList<T>();
+
+		Query query = new Query();
+		query.setIncludeDocs(true);
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + ISO_FORMAT.format(queryDate));
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + END_TOKEN);
+		}
+		else {
+			query.setRangeStart(ISO_FORMAT.format(queryDate));
+			query.setRangeEnd(END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		 
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
 		
 	}
 	
@@ -185,6 +408,10 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		return results;
 		
 	}
+	
+	
+	
+	
 	
 
 	protected String toJSON(T domain)  {
@@ -332,10 +559,17 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			//process temporal range keys
 			if (temporalRangeKeys != null) {
 				for (TemporalRangeKeyMapping mapping : temporalRangeKeys.values()) {
-					Date sourceValue = (Date)PropertyUtils.getProperty(anObject, mapping.getSourceProperty());
+					Object sourceValue = PropertyUtils.getProperty(anObject, mapping.getSourceProperty());
+					Date sourceDate = null;
 					String targetValue = null;
+					if (sourceValue instanceof Long) {
+						sourceDate = new Date((Long)sourceValue);
+					}
+					else {
+						sourceDate = (Date)sourceValue;
+					}
 					if (sourceValue != null) {
-						targetValue = ISO_FORMAT.format(sourceValue);
+						targetValue = ISO_FORMAT.format(sourceDate);
 					}
 					PropertyUtils.setProperty(anObject, mapping.getTargetProperty(), targetValue);
 				}
@@ -348,7 +582,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 				}
 			}
 			else {
-				client.set(toStorageKey(anObject), toJSON(anObject));
+				if (getTtl() != null) {
+					client.set(toStorageKey(anObject), getTtl(), toJSON(anObject));
+				}
+				else {
+					client.set(toStorageKey(anObject), toJSON(anObject));
+				}
 			}
 			
 			if (isEnumerable() && (getEnumerationScheme().equals(EnumerationScheme.KEY_LIST))) {
@@ -474,6 +713,56 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		}
 		for (Entry<String, Object> entry : client.getBulk(translatedKeys).entrySet()) {
 			results.add(fromJSON((String)entry.getValue()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findAllWithView(String viewName) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+
+		Query query = new Query();
+		query.setIncludeDocs(true); // Include the full document body
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
+		}
+		 
+		ViewResponse response = client.query(view, query);
+		 
+		// 4: Iterate over the Data and print out the full document
+		Collection<T> results = new ArrayList<T>((int)response.getTotalRows());
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<T> findAllWithView(String viewName, String rangeKeyValue) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+
+		Query query = new Query();
+		query.setIncludeDocs(true); // Include the full document body
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + rangeKeyValue);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + rangeKeyValue + "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(rangeKeyValue);
+			query.setRangeEnd(rangeKeyValue + "#" +  END_TOKEN);
+		}
+		 
+		ViewResponse response = client.query(view, query);
+		 
+		// 4: Iterate over the Data and print out the full document
+		Collection<T> results = new ArrayList<T>((int)response.getTotalRows());
+		for (ViewRow row : response) {
+		  results.add(fromJSON((String)row.getDocument()));
 		}
 		
 		return results;
@@ -824,7 +1113,25 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-    private static class KeyList {
+	
+	
+    public void setClient(CouchbaseClient client) {
+		this.client = client;
+	}
+
+
+
+	public Integer getTtl() {
+		return ttl;
+	}
+
+	public void setTtl(Integer ttl) {
+		this.ttl = ttl;
+	}
+
+
+
+	private static class KeyList {
     	
     	private final long cas;
     	private final List<String> keys;
