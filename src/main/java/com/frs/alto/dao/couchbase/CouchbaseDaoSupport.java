@@ -533,7 +533,13 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 	protected String toStorageKey(String baseKey) {
 		
-		return toStorageKey(TenantUtils.getThreadTenant(), baseKey);
+		if (isMultiTenant()) {
+			return toStorageKey(TenantUtils.getThreadTenant(), baseKey);
+		}
+		else {
+			return toStorageKey(null, baseKey);
+		}
+	
 		
 	}
 	
@@ -999,7 +1005,18 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 	public T findSingleton(TenantMetaData tenant) {
 		
-		return findById(tenant, KEY_SINGLETON);
+		T result = findById(tenant, KEY_SINGLETON);
+		
+		if (result == null) {
+			try {
+				result = getDomainClass().newInstance();
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		
+		return result;
 		
 	}
 	
