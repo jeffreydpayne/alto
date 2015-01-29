@@ -679,7 +679,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	@Override
 	public Collection<String> findAllIds() {
 		
-		return findAllIds(TenantUtils.getThreadTenant());
+		if (isMultiTenant()) {
+			return findAllIds(TenantUtils.getThreadTenant());
+		}
+		else {
+			return findAllIds();
+		}
 	}
 
 	public Collection<String> findAllIds(TenantMetaData tenant) {
@@ -701,9 +706,62 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+	
+	
+	@Override
+	public long findCount() {
+		if (isMultiTenant()) {
+			return findCount(TenantUtils.getThreadTenant());
+		}
+		else {
+			return findCount(null);
+		}
+					
+	}
+	
+	public long findCount(TenantMetaData tenant) {
+		
+		if (!isEnumerable()) {
+			throw new UnsupportedOperationException();
+		}
+		
+		switch (getEnumerationScheme()) {
+			case VIEW:
+				return findCountWithView(tenant);
+			case KEY_LIST:
+				return findCountWithKeyList(tenant);
+		}
+		
+		return 0;
+		
+		
+	}
+	
+	protected long findCountWithKeyList(TenantMetaData tenant) {
+		
+		return fetchKeyList(tenant).getKeys().size();
+		
+	}
+
 	protected Collection<String> findAllIdsWithKeyList(TenantMetaData tenant) {
 		
 		return fetchKeyList(tenant).getKeys();
+		
+	}
+	
+	protected long findCountWithView(TenantMetaData tenant) {
+		
+		View view = client.getView(getDesignDocumentName(), getViewName());
+
+		Query query = new Query();
+		query.setIncludeDocs(false);
+		if (tenant != null) {
+			query.setRangeStart(tenant.getTenantIdentifier());
+			query.setRangeEnd(tenant.getTenantIdentifier() + "#" +  END_TOKEN);
+		}
+		ViewResponse response = client.query(view, query);
+		
+		return response.getTotalRows();
 		
 	}
 	
@@ -719,7 +777,6 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			query.setRangeEnd(tenant.getTenantIdentifier() + "#" +  END_TOKEN);
 		}
 		ViewResponse response = client.query(view, query);
-		 
 		Collection<String> results = new ArrayList<String>();
 		for (ViewRow row : response) {
 		  results.add(row.getValue());
@@ -833,8 +890,13 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 	@Override
 	public Collection<T> findAll() {
-	
-		return findAll(TenantUtils.getThreadTenant());
+		
+		if (isMultiTenant()) {
+			return findAll(TenantUtils.getThreadTenant());
+		}
+		else {
+			return findAll(null);
+		}
 		
 	}
 	

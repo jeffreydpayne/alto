@@ -24,6 +24,7 @@ public interface BaseDao<T extends BaseDomainObject> {
 	public Collection<String> findAllIds();
 	public Collection<T> findByIds(Collection<String> ids);
 	public Collection<T> findAll();
+	public long findCount();
 	public Class<T> getDomainClass();
 			
 }
