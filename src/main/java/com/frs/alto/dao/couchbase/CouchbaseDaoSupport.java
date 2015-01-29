@@ -36,6 +36,7 @@ import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.frs.alto.core.TenantMetaData;
 import com.frs.alto.dao.BaseCachingDaoImpl;
 import com.frs.alto.domain.BaseDomainObject;
 import com.frs.alto.id.IdentifierGenerator;
@@ -45,6 +46,8 @@ import com.frs.alto.util.TenantUtils;
 public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends BaseCachingDaoImpl<T> implements InitializingBean {
 	
 	public final static String END_TOKEN = "\\u02ad";
+	
+	public final static String KEY_SINGLETON = "singleton";
 	
 	public final static String KEY_LIST_ID = "KEYLIST";
 	
@@ -71,6 +74,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	private String keyNamespace = null;
 	
 	private boolean preserveFetchOrder = false;
+	
+	private boolean singleton = false;
 	
 	private Map<String, TemporalRangeKeyMapping> temporalRangeKeys = null;
 
@@ -250,6 +255,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+	
+	
+	public boolean isSingleton() {
+		return singleton;
+	}
+
 	protected Collection<T> findBetweenWithView(String viewName, Date startDate, Date endDate) {
 
 		
@@ -462,18 +473,18 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected void writeKeyList(KeyList list) {
+	protected void writeKeyList(KeyList list, TenantMetaData md) {
 		//pretty concurrency hostile implementation - fix this
 
 		
 		try {
 			if (list.getCas() > Long.MIN_VALUE) {
-				if ( client.cas(getKeyListKey(), list.getCas(), jsonMapper.writeValueAsString(list.getKeys())) == CASResponse.EXISTS) {
+				if ( client.cas(getKeyListKey(md), list.getCas(), jsonMapper.writeValueAsString(list.getKeys())) == CASResponse.EXISTS) {
 					throw new IllegalStateException("Trying to save object with stale CAS value.");
 				}
 			}
 			else {
-				client.set(getKeyListKey(), jsonMapper.writeValueAsString(list.getKeys()));
+				client.set(getKeyListKey(md), jsonMapper.writeValueAsString(list.getKeys()));
 			}
 		}
 		catch (Exception e) {
@@ -482,11 +493,11 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			
 	}
 	
-	protected KeyList fetchKeyList() {
+	protected KeyList fetchKeyList(TenantMetaData md) {
 		
 		//could be a pretty concurrency hostile implementation - hopefully using CAS protects us from issues
 
-		CASValue<Object> cas = client.gets(getKeyListKey());
+		CASValue<Object> cas = client.gets(getKeyListKey(md));
 		
 		if (cas == null) {
 			return new KeyList(new ArrayList<String>(), Long.MIN_VALUE);
@@ -503,12 +514,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	}
 	
 	
-	protected String getKeyListKey() {
+	protected String getKeyListKey(TenantMetaData md) {
 		
 		StringBuilder sb = new StringBuilder();
 		
-		if (isMultiTenant()) {
-			sb.append(TenantUtils.getThreadTenantIdentifier());
+		if (md != null) {
+			sb.append(md.getTenantIdentifier());
 			sb.append("#");
 		}
 		sb.append(getKeyNamespace());
@@ -519,11 +530,18 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+	
 	protected String toStorageKey(String baseKey) {
 		
+		return toStorageKey(TenantUtils.getThreadTenant(), baseKey);
+		
+	}
+	
+	protected String toStorageKey(TenantMetaData tenant, String baseKey) {
+		
 		StringBuilder builder = new StringBuilder();
-		if (isMultiTenant()) {
-			builder.append(TenantUtils.getThreadTenantIdentifier());
+		if (tenant != null) {
+			builder.append(tenant.getTenantIdentifier());
 			builder.append("#");
 		}
 		builder.append(getKeyNamespace());
@@ -552,8 +570,11 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			if (anObject.isReadOnly()) {
 				throw new RuntimeException("This object is readonly.  Obtain a fresh instance before calling save.");
 			}
-
-			if (anObject.getObjectIdentifier() == null) {
+			
+			if (isSingleton()) {
+				anObject.setObjectIdentifier(KEY_SINGLETON);
+			}
+			else if (anObject.getObjectIdentifier() == null) {
 				anObject.setObjectIdentifier(getIdGenerator().generateStringIdentifier(anObject));
 			}
 			//process temporal range keys
@@ -591,10 +612,10 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			}
 			
 			if (isEnumerable() && (getEnumerationScheme().equals(EnumerationScheme.KEY_LIST))) {
-				KeyList keyList = fetchKeyList();
+				KeyList keyList = fetchKeyList(TenantUtils.getThreadTenant());
 				if (!keyList.getKeys().contains(anObject.getObjectIdentifier())) {
 					keyList.getKeys().add(anObject.getObjectIdentifier());
-					writeKeyList(keyList);
+					writeKeyList(keyList, TenantUtils.getThreadTenant());
 				}
 			}
 			
@@ -619,9 +640,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		client.delete(toStorageKey(id));
 		
 		if (isEnumerable() && (getEnumerationScheme().equals(EnumerationScheme.KEY_LIST))) {
-			KeyList keyList = fetchKeyList();
+			KeyList keyList = fetchKeyList(TenantUtils.getThreadTenant());
 			keyList.getKeys().remove(id);
-			writeKeyList(keyList);
+			writeKeyList(keyList, TenantUtils.getThreadTenant());
 		}
 
 		
@@ -642,9 +663,20 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 		return fromJSON(cas);
 	}
-
+	
+	public T findById(TenantMetaData tenant, String id) {
+		CASValue<Object> cas = client.gets(toStorageKey(tenant, id));
+		
+		return fromJSON(cas);
+	}
+	
 	@Override
 	public Collection<String> findAllIds() {
+		
+		return findAllIds(TenantUtils.getThreadTenant());
+	}
+
+	public Collection<String> findAllIds(TenantMetaData tenant) {
 		
 		
 		if (!isEnumerable()) {
@@ -653,9 +685,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 		switch (getEnumerationScheme()) {
 			case VIEW:
-				return findAllIdsWithView();
+				return findAllIdsWithView(tenant);
 			case KEY_LIST:
-				return findAllIdsWithKeyList();
+				return findAllIdsWithKeyList(tenant);
 		}
 		
 		return null;
@@ -663,22 +695,22 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected Collection<String> findAllIdsWithKeyList() {
+	protected Collection<String> findAllIdsWithKeyList(TenantMetaData tenant) {
 		
-		return fetchKeyList().getKeys();
+		return fetchKeyList(tenant).getKeys();
 		
 	}
 	
 	
-	protected Collection<String> findAllIdsWithView() {
+	protected Collection<String> findAllIdsWithView(TenantMetaData tenant) {
 		
 		View view = client.getView(getDesignDocumentName(), getViewName());
 
 		Query query = new Query();
 		query.setIncludeDocs(false);
-		if (isMultiTenant()) {
-			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
-			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
+		if (tenant != null) {
+			query.setRangeStart(tenant.getTenantIdentifier());
+			query.setRangeEnd(tenant.getTenantIdentifier() + "#" +  END_TOKEN);
 		}
 		ViewResponse response = client.query(view, query);
 		 
@@ -702,9 +734,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	}
 	
 	
-	protected Collection<T> findAllWithKeyList() {
+	protected Collection<T> findAllWithKeyList(TenantMetaData tenant) {
 		
-		KeyList keyList = fetchKeyList();
+		KeyList keyList = fetchKeyList(tenant);
 		
 		Collection<T> results = new ArrayList<T>(keyList.getKeys().size());
 		List<String> translatedKeys = new ArrayList<String>();
@@ -769,15 +801,16 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected Collection<T> findAllWithView() {
+	protected Collection<T> findAllWithView(TenantMetaData tenant) {
 		
 		View view = client.getView(getDesignDocumentName(), getViewName());
 
 		Query query = new Query();
 		query.setIncludeDocs(true); // Include the full document body
-		if (isMultiTenant()) {
-			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
-			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
+		
+		if (tenant != null) {
+			query.setRangeStart(tenant.getTenantIdentifier());
+			query.setRangeEnd(tenant.getTenantIdentifier() + "#" +  END_TOKEN);
 		}
 		 
 		ViewResponse response = client.query(view, query);
@@ -794,6 +827,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 	
 	@Override
 	public Collection<T> findAll() {
+	
+		return findAll(TenantUtils.getThreadTenant());
+		
+	}
+	
+	public Collection<T> findAll(TenantMetaData md) {
 		
 		
 		if (!isEnumerable()) {
@@ -802,9 +841,9 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 		switch (getEnumerationScheme()) {
 			case VIEW:
-				return findAllWithView();
+				return findAllWithView(md);
 			case KEY_LIST:
-				return findAllWithKeyList();
+				return findAllWithKeyList(md);
 		}
 		
 		
@@ -854,6 +893,8 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		cacheTemporalRangeKeys();
 		initializeView();	
 	}
+	
+	
 	
 	protected void cacheTemporalRangeKeys() throws Exception {
 		
@@ -949,6 +990,20 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 		
 	}
+	
+	public T findSingleton() {
+		
+		return findSingleton(TenantUtils.getThreadTenant());
+		
+	}
+	
+	public T findSingleton(TenantMetaData tenant) {
+		
+		return findById(tenant, KEY_SINGLETON);
+		
+	}
+	
+	
 	
 	protected void initializeTemporalView(TemporalView annotation) throws Exception {
 		
