@@ -684,7 +684,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			return findAllIds(TenantUtils.getThreadTenant());
 		}
 		else {
-			return findAllIds();
+			return findAllIds(null);
 		}
 	}
 
@@ -1084,7 +1084,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		if (view == null) {
 			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
 			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
-			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getCustomViewFunction(annotation.mapFunctionPath()), getCustomViewFunction(annotation.reduceFunctionPath()));
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getCustomViewFunction(annotation.mapFunctionPath(), annotation.rangeKey(), annotation.hashKey()), getCustomViewFunction(annotation.reduceFunctionPath(), annotation.rangeKey(), annotation.hashKey()));
 			doc.setView(design);
 			if (!client.createDesignDoc(doc)) {
 				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
@@ -1124,7 +1124,7 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		if (view == null) {
 			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
 			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
-			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getCustomViewFunction(annotation.mapFunctionPath()), getCustomViewFunction(annotation.reduceFunctionPath()));
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getCustomViewFunction(annotation.mapFunctionPath(), annotation.rangeKey(), null ), getCustomViewFunction(annotation.reduceFunctionPath(), annotation.rangeKey(), null));
 			doc.setView(design);
 			if (!client.createDesignDoc(doc)) {
 				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
@@ -1218,7 +1218,12 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
-	protected String getCustomViewFunction(String functionPath) throws Exception {
+	protected String getCustomViewFunction(String functionPath, String rangeKey, String hashKey) throws Exception {
+		
+		if (StringUtils.isEmpty(functionPath)) {
+			return "";
+		}
+		
 		
 		VelocityEngine ve = new VelocityEngine();
 		ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath"); 
@@ -1231,8 +1236,17 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
         Template t = ve.getTemplate( fullPath + "/" + functionPath );
         VelocityContext context = new VelocityContext();
         context.put("keyNameSpace", getKeyNamespace());
+        if (rangeKey != null) {
+        	 context.put("rangeKey", rangeKey);
+        }
+        if (hashKey != null) {
+        	context.put("hashKey", hashKey);
+        }
         StringWriter writer = new StringWriter();
         t.merge( context, writer );
+        
+        System.out.println(writer.toString());
+        
 		return writer.toString();
 	}
 	
