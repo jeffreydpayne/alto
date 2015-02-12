@@ -814,6 +814,54 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+	protected Collection<String> findAllKeysWithView(String viewName) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+
+		Query query = new Query();
+		query.setIncludeDocs(false); // Include the full document body
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier());
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" +  END_TOKEN);
+		}
+		 
+		ViewResponse response = client.query(view, query);
+		 
+		Collection<String> results = new ArrayList<String>((int)response.getTotalRows());
+		for (ViewRow row : response) {
+		  results.add(row.getValue());
+		}
+		
+		return results;
+		
+	}
+	
+	protected Collection<String> findAllKeysWithView(String viewName, String rangeKeyValue) {
+		
+		View view = client.getView(getViewName(viewName), getViewName(viewName));
+
+		Query query = new Query();
+		query.setIncludeDocs(true); // Include the full document body
+		if (isMultiTenant()) {
+			query.setRangeStart(TenantUtils.getThreadTenantIdentifier() + "#" + rangeKeyValue);
+			query.setRangeEnd(TenantUtils.getThreadTenantIdentifier() + "#" + rangeKeyValue + "#" +  END_TOKEN);
+		}
+		else {
+			query.setRangeStart(rangeKeyValue);
+			query.setRangeEnd(rangeKeyValue + "#" +  END_TOKEN);
+		}
+		 
+		ViewResponse response = client.query(view, query);
+		 
+		Collection<String> results = new ArrayList<String>((int)response.getTotalRows());
+		for (ViewRow row : response) {
+		  results.add(row.getValue());
+		}
+		
+		return results;
+		
+	}
+	
 	protected Collection<T> findAllWithView(String viewName) {
 		
 		View view = client.getView(getViewName(viewName), getViewName(viewName));
@@ -1008,14 +1056,40 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			else if (annot.annotationType().equals(RangeKeyView.class)) {
 				initializeRangeKeyView((RangeKeyView)annot);
 			}
+			else if (annot.annotationType().equals(CustomRangeKeyView.class)) {
+				initializeCustomRangeKeyView((CustomRangeKeyView)annot);
+			}
 			else if (annot.annotationType().equals(TemporalViewWithHashKey.class)) {
 				initializeTemporalViewWithHashKey((TemporalViewWithHashKey)annot);
 			}
 			else if (annot.annotationType().equals(HashAndRangeKeyView.class)) {
 				initializeHashAndRangeKeyView((HashAndRangeKeyView)annot);
 			}
+			else if (annot.annotationType().equals(CustomHashAndRangeKeyView.class)) {
+				initializeCustomHashAndRangeKeyView((CustomHashAndRangeKeyView)annot);
+			}
 			
 		}
+		
+	}
+	
+	protected void initializeCustomHashAndRangeKeyView(CustomHashAndRangeKeyView annotation) throws Exception {
+		
+		View view = null;
+		try {
+			view = client.getView(getViewName(annotation.name()), getViewName(annotation.name()));
+		}
+		catch (InvalidViewException e) {}
+		if (view == null) {
+			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
+			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getCustomViewFunction(annotation.mapFunctionPath()), getCustomViewFunction(annotation.reduceFunctionPath()));
+			doc.setView(design);
+			if (!client.createDesignDoc(doc)) {
+				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
+			}
+		}
+		
 		
 	}
 	
@@ -1030,6 +1104,26 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
 			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
 			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getHashAndRangeKeyMapFunction(annotation.hashKey(), annotation.rangeKey()), "");
+			doc.setView(design);
+			if (!client.createDesignDoc(doc)) {
+				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
+			}
+		}
+		
+		
+	}
+	
+	protected void initializeCustomRangeKeyView(CustomRangeKeyView annotation) throws Exception {
+		
+		View view = null;
+		try {
+			view = client.getView(getViewName(annotation.name()), getViewName(annotation.name()));
+		}
+		catch (InvalidViewException e) {}
+		if (view == null) {
+			logger.info("Adding Couchbase View: " + getViewName(annotation.name()));
+			DesignDocument doc = new DesignDocument(getViewName(annotation.name()));
+			ViewDesign design = new ViewDesign(getViewName(annotation.name()), getCustomViewFunction(annotation.mapFunctionPath()), getCustomViewFunction(annotation.reduceFunctionPath()));
 			doc.setView(design);
 			if (!client.createDesignDoc(doc)) {
 				throw new RuntimeException("Unable to create view: " + getViewName(design.getName()));
@@ -1123,6 +1217,19 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		
 	}
 	
+	protected String getCustomViewFunction(String functionPath) throws Exception {
+		
+		VelocityEngine ve = new VelocityEngine();
+		ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath"); 
+		ve.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+        ve.init();
+        Template t = ve.getTemplate( functionPath );
+        VelocityContext context = new VelocityContext();
+        context.put("keyNameSpace", getKeyNamespace());
+        StringWriter writer = new StringWriter();
+        t.merge( context, writer );
+		return writer.toString();
+	}
 	
 	protected String getRangeKeyMapFunction(String rangeKey) throws Exception {
 		
