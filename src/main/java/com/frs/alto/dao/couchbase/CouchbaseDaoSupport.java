@@ -18,6 +18,7 @@ import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 
 import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -1223,7 +1224,11 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 		ve.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath"); 
 		ve.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
         ve.init();
-        Template t = ve.getTemplate( functionPath );
+        
+        String fullPath = this.getClass().getPackage().getName();
+        fullPath = StringUtils.replace(fullPath, ".", "/");
+        
+        Template t = ve.getTemplate( fullPath + "/" + functionPath );
         VelocityContext context = new VelocityContext();
         context.put("keyNameSpace", getKeyNamespace());
         StringWriter writer = new StringWriter();
