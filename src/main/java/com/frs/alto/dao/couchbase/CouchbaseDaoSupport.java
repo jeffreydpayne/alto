@@ -604,10 +604,10 @@ public abstract class CouchbaseDaoSupport<T extends BaseDomainObject> extends Ba
 			}
 			
 			beforeWrite(anObject);
-			if (anObject.getCas() > Long.MIN_VALUE) {
-				if (client.cas(toStorageKey(anObject), anObject.getCas(), toJSON(anObject)) == CASResponse.EXISTS) {
-					throw new IllegalStateException("Trying to save object with stale CAS value.");
-				}
+			if (anObject.getCas() > Long.MIN_VALUE &&
+                    (client.cas(toStorageKey(anObject), anObject.getCas(), toJSON(anObject)) == CASResponse.EXISTS)) {
+                
+				throw new IllegalStateException("Trying to save object with stale CAS value.");
 			}
 			else {
 				if (getTtl() != null) {
