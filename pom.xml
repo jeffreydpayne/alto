@@ -200,21 +200,12 @@
 		<version>0.9.1.2</version>
 		<scope>provided</scope>
 	</dependency>
-	<!-- 
 	<dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate-core</artifactId>
       <version>${hibernate.version}</version>
       <scope>provided</scope>
     </dependency>
-    -->
-    <!--  USING A FORK OF HIBERNATE UNTIL THEY FIX THE REGION FACTORY INJECTION ISSUE -->
-    <dependency>
-	 <groupId>com.frs</groupId>
-	 <artifactId>hibernate-core</artifactId>
-	 <version>4.1.10</version>
-	 <scope>provided</scope>
-  </dependency>
     <dependency>
 		<groupId>org.hibernate</groupId>
 		<artifactId>hibernate-ehcache</artifactId>
